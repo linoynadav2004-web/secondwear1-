@@ -116,14 +116,94 @@ export const AppProvider = ({ children }) => {
   // Fetch Products from Supabase
   const fetchProducts = async () => {
     try {
-      // Fetch all products (RLS policies will control visibility)
+      // 1. Fetch categories to ensure correct mapping of category IDs for the fallback mock products
+      const { data: catData } = await supabase
+        .from('categories')
+        .select('*')
+        .order('name', { ascending: true });
+      
+      const currentCats = catData || [];
+
+      // 2. Fetch products
       const { data, error } = await supabase
         .from('products')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setProducts(data || []);
+      
+      let productsList = data || [];
+      
+      if (productsList.length === 0) {
+        // Build category map to resolve category UUIDs dynamically
+        const catMap = {};
+        currentCats.forEach(c => {
+          if (c.name.includes('חולצות')) catMap['shirts'] = c.id;
+          if (c.name.includes('מכנסיים')) catMap['pants'] = c.id;
+          if (c.name.includes('שמלות')) catMap['dresses'] = c.id;
+          if (c.name.includes('ז\'קטים') || c.name.includes('מעילים')) catMap['jackets'] = c.id;
+          if (c.name.includes('נעליים')) catMap['shoes'] = c.id;
+          if (c.name.includes('אקססוריז')) catMap['accessories'] = c.id;
+        });
+
+        // 4 beautiful pre-seeded mock products to make the store feel alive
+        productsList = [
+          {
+            id: 'mock-1',
+            name: "ז'קט ג'ינס וינטג' ליוויס",
+            description: "ז'קט ג'ינס Levi's מקורי במצב מעולה, כמעט ולא נלבש. מידה M.",
+            price: 150,
+            category_id: catMap['jackets'] || '',
+            image_url: 'https://images.unsplash.com/photo-1576995853123-5a10305d93c0?w=600&auto=format&fit=crop&q=80',
+            condition: 'כמו חדש',
+            size: 'M',
+            status: 'active',
+            user_id: 'mock-user-1',
+            created_at: new Date().toISOString()
+          },
+          {
+            id: 'mock-2',
+            name: 'שמלת פרחים קיצית Zara',
+            description: 'שמלה פרחונית קלילה ואלגנטית של Zara, מתאימה לקיץ ולאירועים. מידה S.',
+            price: 90,
+            category_id: catMap['dresses'] || '',
+            image_url: 'https://images.unsplash.com/photo-1572804013309-59a88b7e92f1?w=600&auto=format&fit=crop&q=80',
+            condition: 'במצב מצוין',
+            size: 'S',
+            status: 'active',
+            user_id: 'mock-user-2',
+            created_at: new Date().toISOString()
+          },
+          {
+            id: 'mock-3',
+            name: 'סניקרס אדידס סטן סמית\'',
+            description: 'נעלי Adidas Stan Smith לבנות קלאסיות. מידה 42. ננעלו פעמים בודדות בלבד.',
+            price: 220,
+            category_id: catMap['shoes'] || '',
+            image_url: 'https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=600&auto=format&fit=crop&q=80',
+            condition: 'כמו חדש',
+            size: '42',
+            status: 'active',
+            user_id: 'mock-user-3',
+            created_at: new Date().toISOString()
+          },
+          {
+            id: 'mock-4',
+            name: 'סוודר גולף צמר מפנק',
+            description: 'סוודר גולף בצבע שמנת, עשוי 100% צמר איכותי ומחמם מאוד. מידה L.',
+            price: 120,
+            category_id: catMap['shirts'] || '',
+            image_url: 'https://images.unsplash.com/photo-1620799140408-edc6dcb6d633?w=600&auto=format&fit=crop&q=80',
+            condition: 'משומש במצב טוב',
+            size: 'L',
+            status: 'active',
+            user_id: 'mock-user-4',
+            created_at: new Date().toISOString()
+          }
+        ];
+      }
+
+      setProducts(productsList);
     } catch (err) {
       console.error('Error fetching products:', err.message);
     }

@@ -4,7 +4,7 @@ import { useApp } from '../context/AppContext';
 import { ShieldCheck, UserPlus, LogIn, Mail, Lock, Phone, User, Link as LinkIcon, AlertCircle } from 'lucide-react';
 
 export default function LoginPage() {
-  const { loginUser, registerUser, loginWithGoogle } = useApp();
+  const { loginUser, registerUser } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -46,15 +46,6 @@ export default function LoginPage() {
       navigate(from, { replace: true });
     } catch (err) {
       setError(err.message || 'אירעה שגיאה. נא לנסות שנית.');
-    }
-  };
-
-  const handleGoogleLogin = async () => {
-    setError('');
-    try {
-      await loginWithGoogle();
-    } catch (err) {
-      setError(err.message || 'ההתחברות עם Google נכשלה. נא לנסות שנית.');
     }
   };
 
@@ -103,28 +94,6 @@ export default function LoginPage() {
               <span>{error}</span>
             </div>
           )}
-
-          {/* Google Login Button */}
-          <button
-            type="button"
-            onClick={handleGoogleLogin}
-            className="w-full flex items-center justify-center gap-3 bg-white hover:bg-bg-warm text-text-dark border border-primary/20 py-3 rounded-xl font-semibold transition-custom shadow-sm hover:scale-[1.01] active:scale-95 text-xs sm:text-sm cursor-pointer"
-          >
-            <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
-              <path
-                fill="#EA4335"
-                d="M12.24 10.285V14.4h6.887c-.648 2.41-2.519 4.114-5.136 4.114-3.483 0-6.316-2.833-6.316-6.316s2.833-6.316 6.316-6.316c1.554 0 2.977.564 4.08 1.49l2.977-2.977C18.983 2.145 15.82 1 12.24 1c-6.076 0-11 4.924-11 11s4.924 11 11 11c6.076 0 10.598-4.148 10.598-11 0-.693-.056-1.348-.158-1.715H12.24z"
-              />
-            </svg>
-            <span>{isLoginMode ? 'התחברות באמצעות Google' : 'הרשמה מהירה באמצעות Google'}</span>
-          </button>
-
-          {/* Or Divider */}
-          <div className="flex items-center">
-            <div className="flex-1 border-t border-primary/10"></div>
-            <span className="px-3 text-xs text-secondary font-medium shrink-0">או באמצעות אימייל</span>
-            <div className="flex-1 border-t border-primary/10"></div>
-          </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
