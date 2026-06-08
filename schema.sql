@@ -77,9 +77,8 @@ CREATE POLICY "Buyers can update product to buy (checkout)" ON public.products
 
 -- Seed Categories
 INSERT INTO public.categories (name, icon_url) VALUES
-('חולצות וטי-שירטס', 'Shirt'),
-('מכנסיים וג\'ינסים', 'Layers'),
-('שמלות וחצאיות', 'Flower'),
-('ז\'קטים ומעילים', 'Wind'),
 ('נעליים', 'Footprints'),
-('אקססוריז ותיקים', 'ShoppingBag');
+('ג\'ינס', 'Layers'),
+('מכנסיים', 'Wind'),
+('חולצה', 'Shirt'),
+('גופיות', 'Sparkles');
