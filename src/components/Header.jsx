@@ -68,22 +68,24 @@ export default function Header() {
         {/* Right Actions */}
         <div className="flex items-center gap-4">
           {/* Cart Icon */}
-          <Link
-            to="/cart"
-            className={`p-2.5 rounded-full border border-primary/10 transition-custom relative ${
-              isActive('/cart') 
-                ? 'bg-accent text-white border-accent' 
-                : 'bg-white text-text-dark hover:bg-primary/5 hover:scale-105'
-            }`}
-            aria-label="Shopping Cart"
-          >
-            <ShoppingBag size={20} />
-            {cart.length > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 bg-accent text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-bg-warm animate-bounce">
-                {cart.length}
-              </span>
-            )}
-          </Link>
+          {!isActive('/login') && (
+            <Link
+              to="/cart"
+              className={`p-2.5 rounded-full border border-primary/10 transition-custom relative ${
+                isActive('/cart') 
+                  ? 'bg-accent text-white border-accent' 
+                  : 'bg-white text-text-dark hover:bg-primary/5 hover:scale-105'
+              }`}
+              aria-label="Shopping Cart"
+            >
+              <ShoppingBag size={20} />
+              {cart.length > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 bg-accent text-white text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-bg-warm animate-bounce">
+                  {cart.length}
+                </span>
+              )}
+            </Link>
+          )}
 
           {/* Login / Profile Dropdown */}
           {currentUser ? (
