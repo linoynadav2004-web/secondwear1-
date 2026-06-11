@@ -109,320 +109,348 @@ export const AppProvider = ({ children }) => {
       if (error) throw error;
       setCategories(data || []);
     } catch (err) {
-      console.error('Error fetching categories:', err.message);
+      console.error('Error fetching categories from database, using mock fallback categories:', err.message);
+      // Fallback categories if database query fails or tables don't exist
+      setCategories([
+        { id: 'cat-shoes', name: 'נעליים', icon_url: 'Footprints' },
+        { id: 'cat-jeans', name: 'ג\'ינס', icon_url: 'Layers' },
+        { id: 'cat-pants', name: 'מכנסיים', icon_url: 'Wind' },
+        { id: 'cat-shirts', name: 'חולצה', icon_url: 'Shirt' },
+        { id: 'cat-tops', name: 'גופיות', icon_url: 'Sparkles' }
+      ]);
     }
   };
 
   // Fetch Products from Supabase
   const fetchProducts = async () => {
+    let currentCats = [];
     try {
-      // 1. Fetch categories to ensure correct mapping of category IDs for the fallback mock products
       const { data: catData } = await supabase
         .from('categories')
         .select('*')
         .order('name', { ascending: true });
-      
-      const currentCats = catData || [];
+      currentCats = catData || [];
+    } catch (err) {
+      console.warn('Could not fetch categories for product mapping, using default list:', err.message);
+    }
 
-      // 2. Fetch products
+    if (currentCats.length === 0) {
+      currentCats = [
+        { id: 'cat-shoes', name: 'נעליים' },
+        { id: 'cat-jeans', name: 'ג\'ינס' },
+        { id: 'cat-pants', name: 'מכנסיים' },
+        { id: 'cat-shirts', name: 'חולצה' },
+        { id: 'cat-tops', name: 'גופיות' }
+      ];
+    }
+
+    let productsList = [];
+    try {
       const { data, error } = await supabase
         .from('products')
         .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      
-      let productsList = data || [];
-      
-      if (productsList.length === 0) {
-        // Build category map to resolve category UUIDs dynamically
-        const catMap = {};
-        currentCats.forEach(c => {
-          if (c.name.includes('נעליים')) catMap['shoes'] = c.id;
-          if (c.name.includes('ג\'ינס')) catMap['jeans'] = c.id;
-          if (c.name.includes('מכנסיים')) catMap['pants'] = c.id;
-          if (c.name.includes('חולצה')) catMap['shirts'] = c.id;
-          if (c.name.includes('גופיות')) catMap['tops'] = c.id;
-        });
-
-        // 20 beautiful pre-seeded mock products to make the store feel alive (interleaved for visual diversity)
-        productsList = [
-          // Row 1: Diverse items
-          {
-            id: 'mock-shoe-1',
-            title: "סניקרס אדידס סטן סמית'",
-            description: "נעלי Adidas Stan Smith לבנות קלאסיות. מידה 42. ננעלו פעמים בודדות בלבד ובמצב מעולה.",
-            price: 220,
-            category_id: catMap['shoes'] || '',
-            image_url: 'https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=600&auto=format&fit=crop&q=80',
-            condition: 'כמו חדש',
-            size: '42',
-            status: 'active',
-            user_id: 'mock-user-1',
-            created_at: new Date(Date.now() - 1000 * 60 * 60).toISOString()
-          },
-          {
-            id: 'mock-jeans-1',
-            title: "ג'ינס Levi's 501 קלאסי",
-            description: "ג'ינס ליוויס מקורי בגזרה ישרה קלאסית. צבע כחול בינוני, במצב מעולה. מידה 32.",
-            price: 190,
-            category_id: catMap['jeans'] || '',
-            image_url: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=600&auto=format&fit=crop&q=80',
-            condition: 'במצב מצוין',
-            size: '32',
-            status: 'active',
-            user_id: 'mock-user-1',
-            created_at: new Date(Date.now() - 1000 * 60 * 10).toISOString()
-          },
-          {
-            id: 'mock-shirt-1',
-            title: "חולצה מכופתרת פסים כחול-לבן",
-            description: "חולצה מכופתרת מכותנה דקה עם פסי תכלת ולבן עדינים, גזרה קלאסית. מידה L.",
-            price: 115,
-            category_id: catMap['shirts'] || '',
-            image_url: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=600&auto=format&fit=crop&q=80',
-            condition: 'במצב מצוין',
-            size: 'L',
-            status: 'active',
-            user_id: 'mock-user-1',
-            created_at: new Date(Date.now() - 1000 * 60 * 30).toISOString()
-          },
-          {
-            id: 'mock-pants-1',
-            title: "מכנסי מחוייט אלגנטי זארה",
-            description: "מכנסיים מחויטים בצבע בז' חול של Zara. מתאימים לעבודה או לאירוע ערב. מידה S.",
-            price: 120,
-            category_id: catMap['pants'] || '',
-            image_url: 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=600&auto=format&fit=crop&q=80',
-            condition: 'כמו חדש',
-            size: 'S',
-            status: 'active',
-            user_id: 'mock-user-1',
-            created_at: new Date(Date.now() - 1000 * 60 * 20).toISOString()
-          },
-
-          // Row 2: Diverse items
-          {
-            id: 'mock-top-1',
-            title: "גופיית ריב לבנה בייסיק",
-            description: "גופיית בייסיק מבד ריב נמתח בצבע לבן. מחמיאה ומתאימה לכל לוק קיצי. מידה S.",
-            price: 45,
-            category_id: catMap['tops'] || '',
-            image_url: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=600&auto=format&fit=crop&q=80',
-            condition: 'כמו חדש',
-            size: 'S',
-            status: 'active',
-            user_id: 'mock-user-1',
-            created_at: new Date(Date.now() - 1000 * 60 * 40).toISOString()
-          },
-          {
-            id: 'mock-shoe-2',
-            title: "מגפי עור שחורים Zara",
-            description: "מגפי עור אלגנטיים של זארה בצבע שחור, נוחים ומתאימים לחורף. מידה 38.",
-            price: 180,
-            category_id: catMap['shoes'] || '',
-            image_url: 'https://images.unsplash.com/photo-1608256246200-53e635b5b65f?w=600&auto=format&fit=crop&q=80',
-            condition: 'במצב מצוין',
-            size: '38',
-            status: 'active',
-            user_id: 'mock-user-2',
-            created_at: new Date(Date.now() - 1000 * 60 * 120).toISOString()
-          },
-          {
-            id: 'mock-jeans-2',
-            title: "ג'ינס סקיני שחור משופשף",
-            description: "ג'ינס סקיני צמוד בצבע שחור פחם משופשף מבית Zara. נלבש פעמים בודדות. מידה 36.",
-            price: 100,
-            category_id: catMap['jeans'] || '',
-            image_url: 'https://images.unsplash.com/photo-1582552938357-32b906df40cd?w=600&auto=format&fit=crop&q=80',
-            condition: 'כמו חדש',
-            size: '36',
-            status: 'active',
-            user_id: 'mock-user-2',
-            created_at: new Date(Date.now() - 1000 * 60 * 70).toISOString()
-          },
-          {
-            id: 'mock-shirt-2',
-            title: "טי-שירט לבנה מכותנה אורגנית",
-            description: "חולצת בייסיק טי-שירט חלקה בצבע לבן בוהק, בד נעים ואיכותי מאוד. מידה M.",
-            price: 60,
-            category_id: catMap['shirts'] || '',
-            image_url: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=600&auto=format&fit=crop&q=80',
-            condition: 'כמו חדש',
-            size: 'M',
-            status: 'active',
-            user_id: 'mock-user-2',
-            created_at: new Date(Date.now() - 1000 * 60 * 90).toISOString()
-          },
-
-          // Row 3: Diverse items
-          {
-            id: 'mock-pants-2',
-            title: "מכנסי קרגו זית טרנדיים",
-            description: "מכנסי קרגו (דגמ\"ח) אופנתיים עם כיסים בצדדים בצבע ירוק זית. מידה M.",
-            price: 135,
-            category_id: catMap['pants'] || '',
-            image_url: 'https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=600&auto=format&fit=crop&q=80',
-            condition: 'במצב מצוין',
-            size: 'M',
-            status: 'active',
-            user_id: 'mock-user-2',
-            created_at: new Date(Date.now() - 1000 * 60 * 80).toISOString()
-          },
-          {
-            id: 'mock-top-2',
-            title: "גופיית סאטן שחורה אלגנטית",
-            description: "גופיית סאטן נשפכת עם כתפיות דקות בצבע שחור עמוק, מתאימה במיוחד ליציאות. מידה M.",
-            price: 75,
-            category_id: catMap['tops'] || '',
-            image_url: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=600&auto=format&fit=crop&q=80',
-            condition: 'במצב מצוין',
-            size: 'M',
-            status: 'active',
-            user_id: 'mock-user-2',
-            created_at: new Date(Date.now() - 1000 * 60 * 100).toISOString()
-          },
-          {
-            id: 'mock-shoe-3',
-            title: "סניקרס נייק אייר פורס 1",
-            description: "Nike Air Force 1 לבנות קלאסיות. במצב מעולה, עברו ניקוי יסודי. מידה 44.",
-            price: 300,
-            category_id: catMap['shoes'] || '',
-            image_url: 'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=600&auto=format&fit=crop&q=80',
-            condition: 'כמו חדש',
-            size: '44',
-            status: 'active',
-            user_id: 'mock-user-3',
-            created_at: new Date(Date.now() - 1000 * 60 * 180).toISOString()
-          },
-          {
-            id: 'mock-jeans-3',
-            title: "ג'ינס וינטג' רחב Wide Leg",
-            description: "ג'ינס רחב ואופנתי בסגנון רטרו שנות ה-90. צבע כחול בהיר, נוח במיוחד. מידה 38.",
-            price: 140,
-            category_id: catMap['jeans'] || '',
-            image_url: 'https://images.unsplash.com/photo-1604176354204-9268737828e4?w=600&auto=format&fit=crop&q=80',
-            condition: 'במצב מצוין',
-            size: '38',
-            status: 'active',
-            user_id: 'mock-user-3',
-            created_at: new Date(Date.now() - 1000 * 60 * 130).toISOString()
-          },
-
-          // Row 4: Diverse items
-          {
-            id: 'mock-shirt-3',
-            title: "חולצת פלנל משבצות אופנתית",
-            description: "חולצה מכופתרת מבד פלנל חם ונעים עם משבצות באדום ושחור. מידה L.",
-            price: 95,
-            category_id: catMap['shirts'] || '',
-            image_url: 'https://images.unsplash.com/photo-1598033129183-c4f50c736f10?w=600&auto=format&fit=crop&q=80',
-            condition: 'משומש במצב טוב',
-            size: 'L',
-            status: 'active',
-            user_id: 'mock-user-3',
-            created_at: new Date(Date.now() - 1000 * 60 * 150).toISOString()
-          },
-          {
-            id: 'mock-pants-3',
-            title: "מכנסי פשתן קיציים לבנים",
-            description: "מכנסיים מ-100% פשתן איכותי וקליל בצבע לבן. מעולים לחוף הים או לקיץ. מידה L.",
-            price: 110,
-            category_id: catMap['pants'] || '',
-            image_url: 'https://images.unsplash.com/photo-1509551388413-e18d0ac5d495?w=600&auto=format&fit=crop&q=80',
-            condition: 'כמו חדש',
-            size: 'L',
-            status: 'active',
-            user_id: 'mock-user-3',
-            created_at: new Date(Date.now() - 1000 * 60 * 140).toISOString()
-          },
-          {
-            id: 'mock-top-3',
-            title: "גופיית ספורט Nike דריי-פיט",
-            description: "גופיית ספורט מנדפת זיעה של נייקי בצבע ורוד עתיק. נוחה לפעילות גופנית. מידה S.",
-            price: 90,
-            category_id: catMap['tops'] || '',
-            image_url: 'https://images.unsplash.com/photo-1518310383802-640c2de311b2?w=600&auto=format&fit=crop&q=80',
-            condition: 'כמו חדש',
-            size: 'S',
-            status: 'active',
-            user_id: 'mock-user-3',
-            created_at: new Date(Date.now() - 1000 * 60 * 160).toISOString()
-          },
-          {
-            id: 'mock-shoe-4',
-            title: "סנדלי עור חומות בעיצוב אישי",
-            description: "סנדלי עור שטוחות ונוחות במיוחד מעור איכותי, מתאימות לקיץ הישראלי. מידה 39.",
-            price: 130,
-            category_id: catMap['shoes'] || '',
-            image_url: 'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=600&auto=format&fit=crop&q=80',
-            condition: 'משומש במצב טוב',
-            size: '39',
-            status: 'active',
-            user_id: 'mock-user-4',
-            created_at: new Date(Date.now() - 1000 * 60 * 240).toISOString()
-          },
-
-          // Row 5: Diverse items
-          {
-            id: 'mock-jeans-4',
-            title: "ג'ינס קרוע אופנתי Pull&Bear",
-            description: "ג'ינס עם קרעים מעוצבים בגזרת Mom fit מבית Pull&Bear. נראה מעולה. מידה 34.",
-            price: 95,
-            category_id: catMap['jeans'] || '',
-            image_url: 'https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=600&auto=format&fit=crop&q=80',
-            condition: 'משומש במצב טוב',
-            size: '34',
-            status: 'active',
-            user_id: 'mock-user-4',
-            created_at: new Date(Date.now() - 1000 * 60 * 190).toISOString()
-          },
-          {
-            id: 'mock-shirt-4',
-            title: "חולצה מכופתרת פשתן שחורה",
-            description: "חולצת פשתן קלילה ואוורירית בצבע שחור, מושלמת ללוק יומיומי משודרג. מידה M.",
-            price: 130,
-            category_id: catMap['shirts'] || '',
-            image_url: 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600&auto=format&fit=crop&q=80',
-            condition: 'כמו חדש',
-            size: 'M',
-            status: 'active',
-            user_id: 'mock-user-4',
-            created_at: new Date(Date.now() - 1000 * 60 * 210).toISOString()
-          },
-          {
-            id: 'mock-pants-4',
-            title: "מכנסי טרנינג אפורים נוחים",
-            description: "מכנסי ספורט/פנאי מכותנה עבה ומחממת בצבע אפור מלאנז'. מידה XL.",
-            price: 80,
-            category_id: catMap['pants'] || '',
-            image_url: 'https://images.unsplash.com/photo-1551854838-212c50b4c184?w=600&auto=format&fit=crop&q=80',
-            condition: 'משומש במצב טוב',
-            size: 'XL',
-            status: 'active',
-            user_id: 'mock-user-4',
-            created_at: new Date(Date.now() - 1000 * 60 * 200).toISOString()
-          },
-          {
-            id: 'mock-top-4',
-            title: "גופיית קרופ בצבע שמנת",
-            description: "גופיית קרופ קצרה וקלילה עם עיטור מיוחד בצבע שמנת חם. מידה XS.",
-            price: 50,
-            category_id: catMap['tops'] || '',
-            image_url: 'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?w=600&auto=format&fit=crop&q=80',
-            condition: 'במצב מצוין',
-            size: 'XS',
-            status: 'active',
-            user_id: 'mock-user-4',
-            created_at: new Date(Date.now() - 1000 * 60 * 220).toISOString()
-          }
-        ];
-      }
-
-      setProducts(productsList);
+      productsList = data || [];
     } catch (err) {
-      console.error('Error fetching products:', err.message);
+      console.error('Error fetching products from database, falling back to client-side mock products:', err.message);
     }
+
+    // If database is empty or queries failed (tables don't exist)
+    if (productsList.length === 0) {
+      const catMap = {
+        'shoes': 'cat-shoes',
+        'jeans': 'cat-jeans',
+        'pants': 'cat-pants',
+        'shirts': 'cat-shirts',
+        'tops': 'cat-tops'
+      };
+
+      // Map dynamic IDs if database succeeded in returning categories
+      currentCats.forEach(c => {
+        if (c.name.includes('נעליים')) catMap['shoes'] = c.id;
+        if (c.name.includes('ג\'ינס')) catMap['jeans'] = c.id;
+        if (c.name.includes('מכנסיים')) catMap['pants'] = c.id;
+        if (c.name.includes('חולצה')) catMap['shirts'] = c.id;
+        if (c.name.includes('גופיות')) catMap['tops'] = c.id;
+      });
+
+      // 20 beautiful pre-seeded mock products to make the store feel alive (interleaved for visual diversity)
+      productsList = [
+        // Row 1: Diverse items
+        {
+          id: 'mock-shoe-1',
+          title: "סניקרס אדידס סטן סמית'",
+          description: "נעלי Adidas Stan Smith לבנות קלאסיות. מידה 42. ננעלו פעמים בודדות בלבד ובמצב מעולה.",
+          price: 220,
+          category_id: catMap['shoes'],
+          image_url: 'https://images.unsplash.com/photo-1560769629-975ec94e6a86?w=600&auto=format&fit=crop&q=80',
+          condition: 'כמו חדש',
+          size: '42',
+          status: 'active',
+          user_id: 'mock-user-1',
+          created_at: new Date(Date.now() - 1000 * 60 * 60).toISOString()
+        },
+        {
+          id: 'mock-jeans-1',
+          title: "ג'ינס Levi's 501 קלאסי",
+          description: "ג'ינס ליוויס מקורי בגזרה ישרה קלאסית. צבע כחול בינוני, במצב מעולה. מידה 32.",
+          price: 190,
+          category_id: catMap['jeans'],
+          image_url: 'https://images.unsplash.com/photo-1542272604-787c3835535d?w=600&auto=format&fit=crop&q=80',
+          condition: 'במצב מצוין',
+          size: '32',
+          status: 'active',
+          user_id: 'mock-user-1',
+          created_at: new Date(Date.now() - 1000 * 60 * 10).toISOString()
+        },
+        {
+          id: 'mock-shirt-1',
+          title: "חולצה מכופתרת פסים כחול-לבן",
+          description: "חולצה מכופתרת מכותנה דקה עם פסי תכלת ולבן עדינים, גזרה קלאסית. מידה L.",
+          price: 115,
+          category_id: catMap['shirts'],
+          image_url: 'https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=600&auto=format&fit=crop&q=80',
+          condition: 'במצב מצוין',
+          size: 'L',
+          status: 'active',
+          user_id: 'mock-user-1',
+          created_at: new Date(Date.now() - 1000 * 60 * 30).toISOString()
+        },
+        {
+          id: 'mock-pants-1',
+          title: "מכנסי מחוייט אלגנטי זארה",
+          description: "מכנסיים מחויטים בצבע בז' חול של Zara. מתאימים לעבודה או לאירוע ערב. מידה S.",
+          price: 120,
+          category_id: catMap['pants'],
+          image_url: 'https://images.unsplash.com/photo-1594633312681-425c7b97ccd1?w=600&auto=format&fit=crop&q=80',
+          condition: 'כמו חדש',
+          size: 'S',
+          status: 'active',
+          user_id: 'mock-user-1',
+          created_at: new Date(Date.now() - 1000 * 60 * 20).toISOString()
+        },
+
+        // Row 2: Diverse items
+        {
+          id: 'mock-top-1',
+          title: "גופיית ריב לבנה בייסיק",
+          description: "גופיית בייסיק מבד ריב נמתח בצבע לבן. מחמיאה ומתאימה לכל לוק קיצי. מידה S.",
+          price: 45,
+          category_id: catMap['tops'],
+          image_url: 'https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=600&auto=format&fit=crop&q=80',
+          condition: 'כמו חדש',
+          size: 'S',
+          status: 'active',
+          user_id: 'mock-user-1',
+          created_at: new Date(Date.now() - 1000 * 60 * 40).toISOString()
+        },
+        {
+          id: 'mock-shoe-2',
+          title: "מגפי עור שחורים Zara",
+          description: "מגפי עור אלגנטיים של זארה בצבע שחור, נוחים ומתאימים לחורף. מידה 38.",
+          price: 180,
+          category_id: catMap['shoes'],
+          image_url: 'https://images.unsplash.com/photo-1608256246200-53e635b5b65f?w=600&auto=format&fit=crop&q=80',
+          condition: 'במצב מצוין',
+          size: '38',
+          status: 'active',
+          user_id: 'mock-user-2',
+          created_at: new Date(Date.now() - 1000 * 60 * 120).toISOString()
+        },
+        {
+          id: 'mock-jeans-2',
+          title: "ג'ינס סקיני שחור משופשף",
+          description: "ג'ינס סקיני צמוד בצבע שחור פחם משופשף מבית Zara. נלבש פעמים בודדות. מידה 36.",
+          price: 100,
+          category_id: catMap['jeans'],
+          image_url: 'https://images.unsplash.com/photo-1582552938357-32b906df40cd?w=600&auto=format&fit=crop&q=80',
+          condition: 'כמו חדש',
+          size: '36',
+          status: 'active',
+          user_id: 'mock-user-2',
+          created_at: new Date(Date.now() - 1000 * 60 * 70).toISOString()
+        },
+        {
+          id: 'mock-shirt-2',
+          title: "טי-שירט לבנה מכותנה אורגנית",
+          description: "חולצת בייסיק טי-שירט חלקה בצבע לבן בוהק, בד נעים ואיכותי מאוד. מידה M.",
+          price: 60,
+          category_id: catMap['shirts'],
+          image_url: 'https://images.unsplash.com/photo-1521572267360-ee0c2909d518?w=600&auto=format&fit=crop&q=80',
+          condition: 'כמו חדש',
+          size: 'M',
+          status: 'active',
+          user_id: 'mock-user-2',
+          created_at: new Date(Date.now() - 1000 * 60 * 90).toISOString()
+        },
+
+        // Row 3: Diverse items
+        {
+          id: 'mock-pants-2',
+          title: "מכנסי קרגו זית טרנדיים",
+          description: "מכנסי קרגו (דגמ\"ח) אופנתיים עם כיסים בצדדים בצבע ירוק זית. מידה M.",
+          price: 135,
+          category_id: catMap['pants'],
+          image_url: 'https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=600&auto=format&fit=crop&q=80',
+          condition: 'במצב מצוין',
+          size: 'M',
+          status: 'active',
+          user_id: 'mock-user-2',
+          created_at: new Date(Date.now() - 1000 * 60 * 80).toISOString()
+        },
+        {
+          id: 'mock-top-2',
+          title: "גופיית סאטן שחורה אלגנטית",
+          description: "גופיית סאטן נשפכת עם כתפיות דקות בצבע שחור עמוק, מתאימה במיוחד ליציאות. מידה M.",
+          price: 75,
+          category_id: catMap['tops'],
+          image_url: 'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=600&auto=format&fit=crop&q=80',
+          condition: 'במצב מצוין',
+          size: 'M',
+          status: 'active',
+          user_id: 'mock-user-2',
+          created_at: new Date(Date.now() - 1000 * 60 * 100).toISOString()
+        },
+        {
+          id: 'mock-shoe-3',
+          title: "סניקרס נייק אייר פורס 1",
+          description: "Nike Air Force 1 לבנות קלאסיות. במצב מעולה, עברו ניקוי יסודי. מידה 44.",
+          price: 300,
+          category_id: catMap['shoes'],
+          image_url: 'https://images.unsplash.com/photo-1595950653106-6c9ebd614d3a?w=600&auto=format&fit=crop&q=80',
+          condition: 'כמו חדש',
+          size: '44',
+          status: 'active',
+          user_id: 'mock-user-3',
+          created_at: new Date(Date.now() - 1000 * 60 * 180).toISOString()
+        },
+        {
+          id: 'mock-jeans-3',
+          title: "ג'ינס וינטג' רחב Wide Leg",
+          description: "ג'ינס רחב ואופנתי בסגנון רטרו שנות ה-90. צבע כחול בהיר, נוח במיוחד. מידה 38.",
+          price: 140,
+          category_id: catMap['jeans'],
+          image_url: 'https://images.unsplash.com/photo-1604176354204-9268737828e4?w=600&auto=format&fit=crop&q=80',
+          condition: 'במצב מצוין',
+          size: '38',
+          status: 'active',
+          user_id: 'mock-user-3',
+          created_at: new Date(Date.now() - 1000 * 60 * 130).toISOString()
+        },
+
+        // Row 4: Diverse items
+        {
+          id: 'mock-shirt-3',
+          title: "חולצת פלנל משבצות אופנתית",
+          description: "חולצה מכופתרת מבד פלנל חם ונעים עם משבצות באדום ושחור. מידה L.",
+          price: 95,
+          category_id: catMap['shirts'],
+          image_url: 'https://images.unsplash.com/photo-1598033129183-c4f50c736f10?w=600&auto=format&fit=crop&q=80',
+          condition: 'משומש במצב טוב',
+          size: 'L',
+          status: 'active',
+          user_id: 'mock-user-3',
+          created_at: new Date(Date.now() - 1000 * 60 * 150).toISOString()
+        },
+        {
+          id: 'mock-pants-3',
+          title: "מכנסי פשתן קיציים לבנים",
+          description: "מכנסיים מ-100% פשתן איכותי וקליל בצבע לבן. מעולים לחוף הים או לקיץ. מידה L.",
+          price: 110,
+          category_id: catMap['pants'],
+          image_url: 'https://images.unsplash.com/photo-1509551388413-e18d0ac5d495?w=600&auto=format&fit=crop&q=80',
+          condition: 'כמו חדש',
+          size: 'L',
+          status: 'active',
+          user_id: 'mock-user-3',
+          created_at: new Date(Date.now() - 1000 * 60 * 140).toISOString()
+        },
+        {
+          id: 'mock-top-3',
+          title: "גופיית ספורט Nike דריי-פיט",
+          description: "גופיית ספורט מנדפת זיעה של נייקי בצבע ורוד עתיק. נוחה לפעילות גופנית. מידה S.",
+          price: 90,
+          category_id: catMap['tops'],
+          image_url: 'https://images.unsplash.com/photo-1518310383802-640c2de311b2?w=600&auto=format&fit=crop&q=80',
+          condition: 'כמו חדש',
+          size: 'S',
+          status: 'active',
+          user_id: 'mock-user-3',
+          created_at: new Date(Date.now() - 1000 * 60 * 160).toISOString()
+        },
+        {
+          id: 'mock-shoe-4',
+          title: "סנדלי עור חומות בעיצוב אישי",
+          description: "סנדלי עור שטוחות ונוחות במיוחד מעור איכותי, מתאימות לקיץ הישראלי. מידה 39.",
+          price: 130,
+          category_id: catMap['shoes'],
+          image_url: 'https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=600&auto=format&fit=crop&q=80',
+          condition: 'משומש במצב טוב',
+          size: '39',
+          status: 'active',
+          user_id: 'mock-user-4',
+          created_at: new Date(Date.now() - 1000 * 60 * 240).toISOString()
+        },
+
+        // Row 5: Diverse items
+        {
+          id: 'mock-jeans-4',
+          title: "ג'ינס קרוע אופנתי Pull&Bear",
+          description: "ג'ינס עם קרעים מעוצבים בגזרת Mom fit מבית Pull&Bear. נראה מעולה. מידה 34.",
+          price: 95,
+          category_id: catMap['jeans'],
+          image_url: 'https://images.unsplash.com/photo-1541099649105-f69ad21f3246?w=600&auto=format&fit=crop&q=80',
+          condition: 'משומש במצב טוב',
+          size: '34',
+          status: 'active',
+          user_id: 'mock-user-4',
+          created_at: new Date(Date.now() - 1000 * 60 * 190).toISOString()
+        },
+        {
+          id: 'mock-shirt-4',
+          title: "חולצה מכופתרת פשתן שחורה",
+          description: "חולצת פשתן קלילה ואוורירית בצבע שחור, מושלמת ללוק יומיומי משודרג. מידה M.",
+          price: 130,
+          category_id: catMap['shirts'],
+          image_url: 'https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=600&auto=format&fit=crop&q=80',
+          condition: 'כמו חדש',
+          size: 'M',
+          status: 'active',
+          user_id: 'mock-user-4',
+          created_at: new Date(Date.now() - 1000 * 60 * 210).toISOString()
+        },
+        {
+          id: 'mock-pants-4',
+          title: "מכנסי טרנינג אפורים נוחים",
+          description: "מכנסי ספורט/פנאי מכותנה עבה ומחממת בצבע אפור מלאנז'. מידה XL.",
+          price: 80,
+          category_id: catMap['pants'],
+          image_url: 'https://images.unsplash.com/photo-1551854838-212c50b4c184?w=600&auto=format&fit=crop&q=80',
+          condition: 'משומש במצב טוב',
+          size: 'XL',
+          status: 'active',
+          user_id: 'mock-user-4',
+          created_at: new Date(Date.now() - 1000 * 60 * 200).toISOString()
+        },
+        {
+          id: 'mock-top-4',
+          title: "גופיית קרופ בצבע שמנת",
+          description: "גופיית קרופ קצרה וקלילה עם עיטור מיוחד בצבע שמנת חם. מידה XS.",
+          price: 50,
+          category_id: catMap['tops'],
+          image_url: 'https://images.unsplash.com/photo-1529139574466-a303027c1d8b?w=600&auto=format&fit=crop&q=80',
+          condition: 'במצב מצוין',
+          size: 'XS',
+          status: 'active',
+          user_id: 'mock-user-4',
+          created_at: new Date(Date.now() - 1000 * 60 * 220).toISOString()
+        }
+      ];
+    }
+
+    setProducts(productsList);
   };
 
   // 1. Authenticated Actions
