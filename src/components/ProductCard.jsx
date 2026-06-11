@@ -42,7 +42,7 @@ export default function ProductCard({ product, showActions = true, isAdminView =
     }
   };
 
-  const isOwnProduct = product.user_id === currentUser.id;
+  const isOwnProduct = currentUser ? product.user_id === currentUser.id : false;
 
   return (
     <div className="bg-white rounded-2xl overflow-hidden shadow-premium hover:shadow-premium-hover transition-custom group flex flex-col h-full border border-primary/5">
