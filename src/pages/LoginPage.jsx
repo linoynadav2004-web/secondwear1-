@@ -4,7 +4,7 @@ import { useApp } from '../context/AppContext';
 import { ShieldCheck, UserPlus, LogIn, Mail, Lock, Phone, User, Link as LinkIcon, AlertCircle } from 'lucide-react';
 
 export default function LoginPage() {
-  const { loginUser, registerUser } = useApp();
+  const { loginUser, registerUser, loginAsDemo } = useApp();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -191,6 +191,25 @@ export default function LoginPage() {
               {isLoginMode ? 'להתחברות' : 'להרשמה וסיום'}
             </button>
           </form>
+
+          <div className="relative my-4 flex items-center justify-center">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-primary/10"></div>
+            </div>
+            <span className="relative bg-white px-4 text-[10px] font-semibold text-secondary uppercase tracking-wider">או</span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              loginAsDemo();
+              navigate(from, { replace: true });
+            }}
+            className="w-full bg-primary/5 hover:bg-primary/10 text-primary border border-primary/20 py-3.5 rounded-xl font-semibold transition-custom text-sm cursor-pointer flex items-center justify-center gap-2"
+          >
+            <ShieldCheck size={18} />
+            <span>כניסה מהירה במצב דמו (עוקף הרשמה)</span>
+          </button>
         </div>
       </div>
     </div>

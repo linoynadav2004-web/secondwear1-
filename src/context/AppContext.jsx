@@ -49,7 +49,12 @@ export const AppProvider = ({ children }) => {
       if (session?.user) {
         fetchUserProfile(session.user.id, session.user);
       } else {
-        setCurrentUser(null);
+        const savedDemo = sessionStorage.getItem('secondwear_demo_user');
+        if (savedDemo) {
+          setCurrentUser(JSON.parse(savedDemo));
+        } else {
+          setCurrentUser(null);
+        }
         setLoading(false);
       }
     });
@@ -58,7 +63,12 @@ export const AppProvider = ({ children }) => {
       if (session?.user) {
         await fetchUserProfile(session.user.id, session.user);
       } else {
-        setCurrentUser(null);
+        const savedDemo = sessionStorage.getItem('secondwear_demo_user');
+        if (savedDemo) {
+          setCurrentUser(JSON.parse(savedDemo));
+        } else {
+          setCurrentUser(null);
+        }
       }
       setLoading(false);
     });
@@ -505,6 +515,19 @@ export const AppProvider = ({ children }) => {
     return data.user;
   };
 
+  const loginAsDemo = () => {
+    const demoUser = {
+      id: '00000000-0000-0000-0000-000000000000',
+      email: 'test-user@secondwear.co.il',
+      full_name: 'לינוי נדב (דמו)',
+      phone: '050-1234567',
+      avatar_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'
+    };
+    sessionStorage.setItem('secondwear_demo_user', JSON.stringify(demoUser));
+    setCurrentUser(demoUser);
+    return demoUser;
+  };
+
   const loginWithGoogle = async () => {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: 'google',
@@ -517,8 +540,9 @@ export const AppProvider = ({ children }) => {
   };
 
   const logoutUser = async () => {
+    sessionStorage.removeItem('secondwear_demo_user');
     const { error } = await supabase.auth.signOut();
-    if (error) console.error('Sign out error:', error.message);
+    if (error) console.warn('Supabase signout notice:', error.message);
     setCurrentUser(null);
   };
 
@@ -636,6 +660,7 @@ export const AppProvider = ({ children }) => {
       isSupabaseConfigured,
       registerUser,
       loginUser,
+      loginAsDemo,
       loginWithGoogle,
       logoutUser,
       getUserById,
