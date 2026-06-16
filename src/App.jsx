@@ -8,6 +8,8 @@ import SellPage from './pages/SellPage';
 import CartPage from './pages/CartPage';
 import MyListingsPage from './pages/MyListingsPage';
 import LoginPage from './pages/LoginPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
+import ProductDetailsPage from './pages/ProductDetailsPage';
 
 // Reusable protected route guard
 function ProtectedRoute({ children }) {
@@ -41,6 +43,8 @@ function AppContent() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
+          <Route path="/product/:id" element={<ProductDetailsPage />} />
           
           {/* Protected Routes */}
           <Route 

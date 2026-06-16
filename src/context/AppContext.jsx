@@ -14,6 +14,38 @@ export const AppProvider = ({ children }) => {
   const [currentUser, setCurrentUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isSupabaseConfigured, setIsSupabaseConfigured] = useState(true);
+  const [users, setUsers] = useState({
+    'mock-user-1': {
+      id: 'mock-user-1',
+      full_name: 'מיכל כהן',
+      phone: '052-4445566',
+      avatar_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80'
+    },
+    'mock-user-2': {
+      id: 'mock-user-2',
+      full_name: 'דניאל לוי',
+      phone: '054-7778899',
+      avatar_url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80'
+    },
+    'mock-user-3': {
+      id: 'mock-user-3',
+      full_name: 'שירה אברהם',
+      phone: '050-3332211',
+      avatar_url: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&auto=format&fit=crop&q=80'
+    },
+    'mock-user-4': {
+      id: 'mock-user-4',
+      full_name: 'יונתן מזרחי',
+      phone: '053-9998877',
+      avatar_url: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80'
+    },
+    '00000000-0000-0000-0000-000000000000': {
+      id: '00000000-0000-0000-0000-000000000000',
+      full_name: 'לינוי נדב (דמו)',
+      phone: '050-1234567',
+      avatar_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'
+    }
+  });
 
   // Check if Supabase keys are configured
   useEffect(() => {
@@ -33,6 +65,7 @@ export const AppProvider = ({ children }) => {
 
   // Fetch products and categories on mount / when auth state changes
   useEffect(() => {
+    fetchUsers();
     fetchCategories();
     fetchProducts();
   }, [currentUser]);
@@ -107,6 +140,28 @@ export const AppProvider = ({ children }) => {
       setLoading(false);
     }
   };
+ 
+  // Fetch Users from Supabase and cache them in the users state
+  const fetchUsers = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*');
+      
+      if (error) throw error;
+      if (data) {
+        setUsers(prev => {
+          const next = { ...prev };
+          data.forEach(user => {
+            next[user.id] = user;
+          });
+          return next;
+        });
+      }
+    } catch (err) {
+      console.warn('Could not fetch user profiles from database:', err.message);
+    }
+  };
 
   // Fetch Categories from Supabase
   const fetchCategories = async () => {
@@ -126,7 +181,10 @@ export const AppProvider = ({ children }) => {
         { id: 'cat-jeans', name: 'ג\'ינס', icon_url: 'Layers' },
         { id: 'cat-pants', name: 'מכנסיים', icon_url: 'Wind' },
         { id: 'cat-shirts', name: 'חולצה', icon_url: 'Shirt' },
-        { id: 'cat-tops', name: 'גופיות', icon_url: 'Sparkles' }
+        { id: 'cat-tops', name: 'גופיות', icon_url: 'Sparkles' },
+        { id: 'cat-dresses', name: 'שמלות וחצאיות', icon_url: 'Sparkles' },
+        { id: 'cat-jackets', name: 'ז\'קטים ומעילים', icon_url: 'Shirt' },
+        { id: 'cat-accessories', name: 'אקססוריז ותיקים', icon_url: 'ShoppingBag' }
       ]);
     }
   };
@@ -155,6 +213,7 @@ export const AppProvider = ({ children }) => {
     }
 
     let productsList = [];
+    let querySucceeded = false;
     try {
       const { data, error } = await supabase
         .from('products')
@@ -163,12 +222,13 @@ export const AppProvider = ({ children }) => {
 
       if (error) throw error;
       productsList = data || [];
+      querySucceeded = true;
     } catch (err) {
       console.error('Error fetching products from database, falling back to client-side mock products:', err.message);
     }
 
-    // If database is empty or queries failed (tables don't exist)
-    if (productsList.length === 0) {
+    // If database queries failed (tables don't exist / database connection error)
+    if (!querySucceeded) {
       const catMap = {
         'shoes': 'cat-shoes',
         'jeans': 'cat-jeans',
@@ -460,7 +520,9 @@ export const AppProvider = ({ children }) => {
       ];
     }
 
-    setProducts(productsList);
+    const savedCustom = localStorage.getItem('secondwear_custom_products');
+    const localProds = savedCustom ? JSON.parse(savedCustom) : [];
+    setProducts([...localProds, ...productsList]);
   };
 
   // 1. Authenticated Actions
@@ -499,7 +561,7 @@ export const AppProvider = ({ children }) => {
       await fetchUserProfile(authData.user.id, authData.user);
     }
     
-    return authData.user;
+    return { user: authData.user, session: authData.session };
   };
 
   const loginUser = async (email, password) => {
@@ -550,25 +612,53 @@ export const AppProvider = ({ children }) => {
   const addProduct = async (productData) => {
     if (!currentUser) throw new Error('עליך להיות מחובר כדי לפרסם מוצר.');
 
-    const { data, error } = await supabase
-      .from('products')
-      .insert([
-        {
-          title: productData.title,
-          description: productData.description,
-          price: parseFloat(productData.price),
-          image_url: productData.imageUrl,
-          category_id: productData.categoryId,
-          user_id: currentUser.id,
-          status: 'pending_fee_approval', // Main Flow Step A
-          fee_proof_url: productData.feeProofUrl
-        }
-      ])
-      .select();
+    const newProd = {
+      id: 'prod-' + Date.now(),
+      title: productData.title,
+      description: productData.description,
+      price: parseFloat(productData.price),
+      image_url: productData.imageUrl,
+      category_id: productData.categoryId,
+      user_id: currentUser.id,
+      status: 'active', // Instantly active since fee is paid via Credit Card
+      fee_proof_url: null,
+      created_at: new Date().toISOString()
+    };
 
-    if (error) throw error;
-    await fetchProducts();
-    return data?.[0];
+    try {
+      const { data, error } = await supabase
+        .from('products')
+        .insert([
+          {
+            title: productData.title,
+            description: productData.description,
+            price: parseFloat(productData.price),
+            image_url: productData.imageUrl,
+            category_id: productData.categoryId,
+            user_id: currentUser.id,
+            status: 'active',
+            fee_proof_url: null
+          }
+        ])
+        .select();
+
+      if (error) throw error;
+      if (data?.[0]) {
+        await fetchProducts();
+        return data[0];
+      }
+    } catch (err) {
+      console.warn('Database addProduct failed, using local fallback:', err.message);
+      
+      // Save to localStorage for persistence across refreshes
+      const savedCustom = localStorage.getItem('secondwear_custom_products');
+      const localProds = savedCustom ? JSON.parse(savedCustom) : [];
+      const updatedLocal = [newProd, ...localProds];
+      localStorage.setItem('secondwear_custom_products', JSON.stringify(updatedLocal));
+
+      setProducts((prev) => [newProd, ...prev]);
+      return newProd;
+    }
   };
 
   // 3. Cart Actions
@@ -585,23 +675,58 @@ export const AppProvider = ({ children }) => {
     setCart([]);
   };
 
+  const updateLocalCustomProduct = (productId, updates) => {
+    const savedCustom = localStorage.getItem('secondwear_custom_products');
+    if (savedCustom) {
+      const localProds = JSON.parse(savedCustom);
+      const updated = localProds.map(p => p.id === productId ? { ...p, ...updates } : p);
+      localStorage.setItem('secondwear_custom_products', JSON.stringify(updated));
+    }
+  };
+
   // 4. Checkout (P2P transaction initialization)
-  const checkoutCart = async (paymentMethod, paymentProofUrl) => {
+  const checkoutCart = async (paymentMethod, paymentProofsMap) => {
     if (!currentUser) throw new Error('עליך להיות מחובר כדי לבצע רכישה.');
 
-    for (const item of cart) {
-      const { error } = await supabase
-        .from('products')
-        .update({
-          status: 'pending_payment_approval', // Main Flow Step B
-          buyer_id: currentUser.id,
-          payment_proof_url: paymentProofUrl,
-          payment_method: paymentMethod
-        })
-        .eq('id', item.id);
+    // 1. Update local state in-memory immediately (optimistic UI & demo user support)
+    setProducts((prevProducts) =>
+      prevProducts.map((p) => {
+        const isInCart = cart.some((item) => item.id === p.id);
+        if (isInCart) {
+          const proofUrl = typeof paymentProofsMap === 'object' ? paymentProofsMap[p.id] : paymentProofsMap;
+          const updates = {
+            status: 'pending_payment_approval',
+            buyer_id: currentUser.id,
+            payment_proof_url: proofUrl,
+            payment_method: paymentMethod
+          };
+          updateLocalCustomProduct(p.id, updates);
+          return {
+            ...p,
+            ...updates
+          };
+        }
+        return p;
+      })
+    );
 
-      if (error) {
-        console.error(`Checkout error for product ${item.id}:`, error.message);
+    // 2. Perform Supabase database update
+    for (const item of cart) {
+      const proofUrl = typeof paymentProofsMap === 'object' ? paymentProofsMap[item.id] : paymentProofsMap;
+      try {
+        const { error } = await supabase
+          .from('products')
+          .update({
+            status: 'pending_payment_approval', // Main Flow Step B
+            buyer_id: currentUser.id,
+            payment_proof_url: proofUrl,
+            payment_method: paymentMethod
+          })
+          .eq('id', item.id);
+
+        if (error) throw error;
+      } catch (err) {
+        console.warn(`Checkout database update skipped/failed for product ${item.id}:`, err.message);
       }
     }
 
@@ -611,43 +736,195 @@ export const AppProvider = ({ children }) => {
 
   // 5. Seller approves payment (Step C)
   const approvePayment = async (productId) => {
-    const { error } = await supabase
-      .from('products')
-      .update({ status: 'sold' })
-      .eq('id', productId);
+    // 1. Update local state in-memory immediately
+    setProducts((prev) =>
+      prev.map((p) => {
+        if (p.id === productId) {
+          updateLocalCustomProduct(productId, { status: 'sold' });
+          return { ...p, status: 'sold' };
+        }
+        return p;
+      })
+    );
 
-    if (error) throw error;
+    // 2. Database update
+    try {
+      const { error } = await supabase
+        .from('products')
+        .update({ status: 'sold' })
+        .eq('id', productId);
+
+      if (error) throw error;
+    } catch (err) {
+      console.warn(`Database approvePayment failed, using local fallback:`, err.message);
+    }
     await fetchProducts();
   };
 
   // 6. Admin: Approve Listing Fee
   const approveListingFee = async (productId) => {
-    const { error } = await supabase
-      .from('products')
-      .update({ status: 'active' })
-      .eq('id', productId);
+    // 1. Update local state in-memory immediately
+    setProducts((prev) =>
+      prev.map((p) => {
+        if (p.id === productId) {
+          updateLocalCustomProduct(productId, { status: 'active' });
+          return { ...p, status: 'active' };
+        }
+        return p;
+      })
+    );
 
-    if (error) throw error;
+    // 2. Database update
+    try {
+      const { error } = await supabase
+        .from('products')
+        .update({ status: 'active' })
+        .eq('id', productId);
+
+      if (error) throw error;
+    } catch (err) {
+      console.warn(`Database approveListingFee failed, using local fallback:`, err.message);
+    }
     await fetchProducts();
   };
 
-  // Helper to fetch any user details by ID
-  const getUserById = async (userId) => {
-    try {
-      const { data, error } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', userId)
-        .single();
-      if (error) throw error;
-      return data;
-    } catch (err) {
-      return {
-        full_name: 'משתמש/ת SecondWear',
-        phone: 'לא זמין',
-        avatar_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'
-      };
+  const deleteProduct = async (productId) => {
+    // 1. If it is a custom local fallback product (offline/demo), delete locally
+    if (productId.toString().startsWith('prod-')) {
+      setProducts((prev) => prev.filter((p) => p.id !== productId));
+      const savedCustom = localStorage.getItem('secondwear_custom_products');
+      if (savedCustom) {
+        const localProds = JSON.parse(savedCustom);
+        const updatedLocal = localProds.filter((p) => p.id !== productId);
+        localStorage.setItem('secondwear_custom_products', JSON.stringify(updatedLocal));
+      }
+      return;
     }
+
+    // 2. Delete from Supabase database first
+    const { error } = await supabase
+      .from('products')
+      .delete()
+      .eq('id', productId);
+
+    if (error) {
+      console.error(`Database deleteProduct failed for product ${productId}:`, error.message);
+      throw error;
+    }
+
+    // 3. If database deletion succeeded, filter the local state
+    setProducts((prev) => prev.filter((p) => p.id !== productId));
+  };
+
+  // Update User Profile Details
+  const updateUserProfile = async (profileData) => {
+    if (!currentUser) throw new Error('עליך להיות מחובר כדי לעדכן פרופיל.');
+
+    // 1. If not a mock/demo user, update in database
+    if (currentUser.id !== '00000000-0000-0000-0000-000000000000') {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          full_name: profileData.fullName,
+          phone: profileData.phone,
+          avatar_url: profileData.avatarUrl || null
+        })
+        .eq('id', currentUser.id);
+
+      if (error) throw error;
+      
+      // Also update auth user metadata
+      const { error: authError } = await supabase.auth.updateUser({
+        data: {
+          full_name: profileData.fullName,
+          phone: profileData.phone,
+          avatar_url: profileData.avatarUrl
+        }
+      });
+      if (authError) {
+        console.warn('Auth user metadata update warning:', authError.message);
+      }
+    }
+
+    // 2. Update local state
+    const updated = {
+      ...currentUser,
+      full_name: profileData.fullName,
+      phone: profileData.phone,
+      avatar_url: profileData.avatarUrl || ''
+    };
+    setCurrentUser(updated);
+    
+    // Update demo user storage if demo
+    if (currentUser.id === '00000000-0000-0000-0000-000000000000') {
+      sessionStorage.setItem('secondwear_demo_user', JSON.stringify(updated));
+    }
+
+    // Refresh users cache
+    setUsers(prev => ({
+      ...prev,
+      [currentUser.id]: updated
+    }));
+
+    return updated;
+  };
+
+  // Update User Email
+  const updateUserEmail = async (newEmail) => {
+    if (!currentUser) throw new Error('עליך להיות מחובר כדי לעדכן אימייל.');
+
+    if (currentUser.id !== '00000000-0000-0000-0000-000000000000') {
+      const { error } = await supabase.auth.updateUser({ email: newEmail });
+      if (error) throw error;
+      
+      // Update in public.users table as well
+      const { error: dbError } = await supabase
+        .from('users')
+        .update({ email: newEmail })
+        .eq('id', currentUser.id);
+      if (dbError) {
+        console.error('Database email update error:', dbError.message);
+      }
+    }
+
+    const updated = { ...currentUser, email: newEmail };
+    setCurrentUser(updated);
+    if (currentUser.id === '00000000-0000-0000-0000-000000000000') {
+      sessionStorage.setItem('secondwear_demo_user', JSON.stringify(updated));
+    }
+    
+    setUsers(prev => ({
+      ...prev,
+      [currentUser.id]: updated
+    }));
+  };
+
+  // Update User Password
+  const updateUserPassword = async (newPassword) => {
+    if (!currentUser) throw new Error('עליך להיות מחובר כדי לעדכן סיסמה.');
+
+    if (currentUser.id !== '00000000-0000-0000-0000-000000000000') {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+    }
+  };
+
+  // Send Password Reset Email
+  const sendPasswordResetEmail = async (email) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`
+    });
+    if (error) throw error;
+  };
+
+  // Helper to fetch any user details by ID from local cache state
+  const getUserById = (userId) => {
+    if (!userId) return null;
+    return users[userId] || {
+      full_name: 'משתמש/ת SecondWear',
+      phone: 'לא זמין',
+      avatar_url: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'
+    };
   };
 
   return (
@@ -665,12 +942,17 @@ export const AppProvider = ({ children }) => {
       logoutUser,
       getUserById,
       addProduct,
+      deleteProduct,
       addToCart,
       removeFromCart,
       clearCart,
       checkoutCart,
       approvePayment,
       approveListingFee,
+      updateUserProfile,
+      updateUserEmail,
+      updateUserPassword,
+      sendPasswordResetEmail,
       refreshData: async () => {
         await fetchCategories();
         await fetchProducts();

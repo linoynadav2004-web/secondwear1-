@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import UploadZone from '../components/UploadZone';
-import { AlertCircle, ArrowLeft, Landmark, CheckCircle, ShieldAlert } from 'lucide-react';
+import CityInput from '../components/CityInput';
+import { AlertCircle, ArrowLeft, CreditCard, CheckCircle, ShieldAlert, Lock, Loader2 } from 'lucide-react';
 
 export default function SellPage() {
   const { categories, addProduct } = useApp();
@@ -14,10 +15,16 @@ export default function SellPage() {
   const [price, setPrice] = useState('');
   const [categoryId, setCategoryId] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  const [useUrl, setUseUrl] = useState(false);
+  const [city, setCity] = useState('');
   
   // Publication Fee Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [feeProofUrl, setFeeProofUrl] = useState('');
+  const [cardName, setCardName] = useState('');
+  const [cardNumber, setCardNumber] = useState('');
+  const [cardExpiry, setCardExpiry] = useState('');
+  const [cardCvv, setCardCvv] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
 
   // Validate basic form before opening fee modal
@@ -27,52 +34,68 @@ export default function SellPage() {
       alert('נא למלא שדות חובה: כותרת, מחיר וקטגוריה.');
       return;
     }
+    if (!imageUrl) {
+      alert('נא להעלות תמונת מוצר או להזין קישור לתמונה.');
+      return;
+    }
     setIsModalOpen(true);
   };
 
-  // Final submission from inside modal
-  const handleFinalSubmit = () => {
-    if (!feeProofUrl) return;
+  // Final submission from inside modal (Credit Card payment simulation)
+  const handleFinalSubmit = async (e) => {
+    e.preventDefault();
+    if (!cardName || !cardNumber || !cardExpiry || !cardCvv) {
+      alert('נא למלא את כל פרטי כרטיס האשראי.');
+      return;
+    }
+
+    setIsProcessing(true);
+    
+    // Simulate 2-second premium payment delay
+    await new Promise((resolve) => setTimeout(resolve, 2000));
 
     // Use default premium clothes fallback images if user hasn't provided a valid image URL
     const finalImageUrl = imageUrl.trim() || 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=600&auto=format&fit=crop&q=80';
 
-    addProduct({
-      title,
-      description,
-      price,
-      categoryId,
-      imageUrl: finalImageUrl,
-      feeProofUrl
-    });
+    const finalDescription = city ? `${description}\n\n📍 מיקום איסוף: ${city}` : description;
 
-    setIsModalOpen(false);
-    setIsSubmitted(true);
+    try {
+      await addProduct({
+        title,
+        description: finalDescription,
+        price,
+        categoryId,
+        imageUrl: finalImageUrl
+      });
+      setIsModalOpen(false);
+      setIsSubmitted(true);
+    } catch (err) {
+      alert(`שגיאה בתשלום או בפרסום המוצר: ${err.message}`);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   if (isSubmitted) {
     return (
-      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-6">
+      <div className="max-w-xl mx-auto px-4 py-16 text-center space-y-6 font-inter">
         <div className="w-20 h-20 bg-success-soft/10 text-success-soft rounded-full flex items-center justify-center mx-auto shadow-sm">
           <CheckCircle size={44} />
         </div>
         
-        <h1 className="font-playfair text-3xl font-bold text-text-dark">המוצר הועלה בהצלחה!</h1>
+        <h1 className="font-playfair text-3xl font-bold text-text-dark">המוצר פורסם בהצלחה!</h1>
         
         <div className="bg-white p-6 rounded-2xl border border-primary/10 shadow-premium text-right space-y-4">
           <p className="text-sm text-text-dark leading-relaxed">
-            הפריט <strong className="text-primary">"{title}"</strong> נרשם במערכת בסטטוס:
+            הפריט <strong className="text-primary">"{title}"</strong> מפורסם כעת ופעיל באתר:
           </p>
-          <div className="bg-amber-50 border border-amber-200 p-3.5 rounded-xl text-amber-800 text-xs font-semibold flex items-center gap-2">
-            <AlertCircle size={16} />
-            <span>ממתין לאישור עמלת פרסום (pending_fee_approval)</span>
+          <div className="bg-success-soft/10 border border-success-soft/20 p-3.5 rounded-xl text-success-soft text-xs font-semibold flex items-center gap-2">
+            <CheckCircle size={16} />
+            <span>פעיל ומפורסם בקטלוג (active)</span>
           </div>
           <p className="text-xs text-secondary leading-relaxed">
-            מאחר וסיימת להעלות את צילום מסך האסמכתא על סך 10 ש״ח, מנהלי האתר יאשרו את הפריט בקרוב והוא יופיע למכירה.
+            עמלת הפרסום (10 ש״ח) שולמה בהצלחה באשראי מאובטח. הפריט שלך גלוי כעת לכל חברי הקהילה בקטלוג הראשי!
           </p>
-          <div className="bg-primary/5 p-3.5 rounded-lg border border-primary/10 text-[11px] text-text-dark/95">
-            💡 <strong>הערה:</strong> הפריט הועבר לבדיקה מהירה של מנהל האתר. תוך מספר שניות הוא יאושר אוטומטית ויוצג בקטלוג הראשי.
-          </div>
         </div>
 
         <div className="flex gap-4 justify-center">
@@ -89,7 +112,11 @@ export default function SellPage() {
               setPrice('');
               setCategoryId('');
               setImageUrl('');
-              setFeeProofUrl('');
+              setCardName('');
+              setCardNumber('');
+              setCardExpiry('');
+              setCardCvv('');
+              setCity('');
               setIsSubmitted(false);
             }}
             className="bg-white hover:bg-bg-warm text-text-dark border border-primary/20 px-6 py-3 rounded-xl text-sm font-semibold transition-custom cursor-pointer"
@@ -194,23 +221,76 @@ export default function SellPage() {
             </div>
           </div>
 
-          {/* Image URL Input */}
+          {/* City Autocomplete field */}
           <div>
-            <label htmlFor="image" className="block text-sm font-semibold text-text-dark mb-1.5">
-              קישור לתמונת הפריט (URL)
-            </label>
-            <input
-              type="url"
-              id="image"
-              value={imageUrl}
-              onChange={(e) => setImageUrl(e.target.value)}
-              placeholder="הדביקו קישור לתמונה או השאירו ריק להמחשה דיפולטיבית"
-              className="w-full px-4 py-3 rounded-xl border border-secondary/30 focus:border-accent focus:ring-1 focus:ring-accent outline-none text-sm transition-custom"
+            <CityInput
+              required
+              value={city}
+              onChange={setCity}
+              placeholder="בחרו או הקלידו עיר איסוף..."
+              label="עיר איסוף עצמי *"
             />
-            {imageUrl && (
-              <div className="mt-3 relative w-32 h-32 rounded-lg overflow-hidden border border-secondary/20 shadow-sm">
-                <img src={imageUrl} alt="תצוגה מקדימה" className="object-cover w-full h-full" onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=600&auto=format&fit=crop&q=80'; }} />
+          </div>
+
+          {/* Image Upload / URL Selector */}
+          <div>
+            <label className="block text-sm font-semibold text-text-dark mb-1.5">
+              תמונת המוצר <span className="text-error-soft">*</span>
+            </label>
+            
+            {/* Toggle tabs */}
+            <div className="flex gap-2 mb-3">
+              <button
+                type="button"
+                onClick={() => { setUseUrl(false); setImageUrl(''); }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-custom cursor-pointer ${
+                  !useUrl 
+                    ? 'bg-accent text-white shadow-sm' 
+                    : 'bg-primary/5 text-text-dark hover:bg-primary/10'
+                }`}
+              >
+                העלאת קובץ תמונה
+              </button>
+              <button
+                type="button"
+                onClick={() => { setUseUrl(true); setImageUrl(''); }}
+                className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-custom cursor-pointer ${
+                  useUrl 
+                    ? 'bg-accent text-white shadow-sm' 
+                    : 'bg-primary/5 text-text-dark hover:bg-primary/10'
+                }`}
+              >
+                הזנת קישור (URL)
+              </button>
+            </div>
+
+            {useUrl ? (
+              <div className="space-y-3">
+                <input
+                  type="url"
+                  value={imageUrl}
+                  onChange={(e) => setImageUrl(e.target.value)}
+                  placeholder="הדביקו קישור לתמונה (URL)"
+                  className="w-full px-4 py-3 rounded-xl border border-secondary/30 focus:border-accent focus:ring-1 focus:ring-accent outline-none text-sm transition-custom"
+                />
+                {imageUrl && (
+                  <div className="relative w-32 h-32 rounded-lg overflow-hidden border border-secondary/20 shadow-sm">
+                    <img 
+                      src={imageUrl} 
+                      alt="תצוגה מקדימה" 
+                      className="object-cover w-full h-full" 
+                      onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=600&auto=format&fit=crop&q=80'; }} 
+                    />
+                  </div>
+                )}
               </div>
+            ) : (
+              <UploadZone
+                label=""
+                description="גררו קובץ תמונה של הבגד או לחצו לבחירה"
+                onUploadSuccess={(url) => setImageUrl(url)}
+                required={true}
+              />
             )}
           </div>
 
@@ -239,68 +319,149 @@ export default function SellPage() {
         </div>
       </div>
 
-      {/* Main Flow Step A: Publication Fee Modal */}
+      {/* Main Flow Step A: Credit Card Publication Fee Modal */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 border border-primary/10 shadow-2xl relative space-y-6 animate-in fade-in zoom-in-95 duration-200">
+          <div className="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 border border-primary/10 shadow-2xl relative space-y-6 animate-scale-up">
             
             {/* Modal Title */}
-            <div className="text-center">
-              <div className="w-12 h-12 bg-accent/10 text-accent rounded-full flex items-center justify-center mx-auto mb-3">
-                <Landmark size={24} />
+            <div className="text-center space-y-1">
+              <div className="w-12 h-12 bg-accent/10 text-accent rounded-full flex items-center justify-center mx-auto mb-2">
+                <CreditCard size={24} />
               </div>
-              <h2 className="font-playfair text-2xl font-bold text-text-dark">עמלת פרסום קבועה: ₪10</h2>
-              <p className="text-secondary text-xs mt-1">אנא העבירו את דמי הפרסום לקבלת אישור הפעלה מיידי</p>
+              <h2 className="font-playfair text-2xl font-bold text-text-dark">תשלום עמלת פרסום: ₪10</h2>
+              <p className="text-secondary text-xs font-light">לפרסום מיידי של הפריט בקטלוג הקהילתי</p>
             </div>
 
-            {/* Instruction Details */}
-            <div className="bg-bg-warm rounded-2xl p-5 border border-primary/5 space-y-3.5 text-sm">
-              <div className="flex justify-between items-center text-text-dark">
-                <span className="font-medium">טלפון להעברה:</span>
-                <span className="font-bold text-accent text-base tracking-wider">050-7778899</span>
+            {/* Credit Card Details Form */}
+            <form onSubmit={handleFinalSubmit} className="space-y-4 text-right">
+              {/* Cardholder Name */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-text-dark">שם בעל הכרטיס <span className="text-error-soft">*</span></label>
+                <input
+                  type="text"
+                  required
+                  placeholder="ישראל ישראלי"
+                  value={cardName}
+                  onChange={(e) => setCardName(e.target.value)}
+                  disabled={isProcessing}
+                  className="w-full px-4 py-2.5 text-sm rounded-xl border border-primary/10 bg-bg-warm/50 focus:border-accent focus:bg-white outline-none transition-custom text-right"
+                />
               </div>
-              <div className="flex justify-between items-center text-text-dark">
-                <span className="font-medium">אפליקציות נתמכות:</span>
-                <span className="font-semibold text-primary">Bit או PayBox</span>
+
+              {/* Card Number */}
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-text-dark">מספר כרטיס אשראי <span className="text-error-soft">*</span></label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    required
+                    placeholder="4580 1234 5678 9012"
+                    maxLength="19"
+                    value={cardNumber}
+                    onChange={(e) => {
+                      let val = e.target.value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
+                      let matches = val.match(/\d{4,16}/g);
+                      let match = (matches && matches[0]) || '';
+                      let parts = [];
+                      for (let i = 0, len = match.length; i < len; i += 4) {
+                        parts.push(match.substring(i, i + 4));
+                      }
+                      if (parts.length > 0) {
+                        setCardNumber(parts.join(' '));
+                      } else {
+                        setCardNumber(val);
+                      }
+                    }}
+                    disabled={isProcessing}
+                    className="w-full px-4 py-2.5 pr-10 text-sm rounded-xl border border-primary/10 bg-bg-warm/50 focus:border-accent focus:bg-white outline-none transition-custom text-left tracking-widest font-mono"
+                    style={{ direction: 'ltr' }}
+                  />
+                  <div className="absolute top-1/2 right-3 -translate-y-1/2 text-secondary">
+                    <CreditCard size={16} />
+                  </div>
+                </div>
               </div>
-              <div className="h-px bg-primary/10"></div>
-              <p className="text-xs text-secondary leading-relaxed">
-                שלחו 10 ש״ח למספר לעיל באפליקציית bit או Paybox עם תיאור ״עמלת פרסום SecondWear״. צלמו מסך של אישור העברה והעלו אותו מטה כהוכחה.
-              </p>
-            </div>
 
-            {/* Upload screenshot */}
-            <div>
-              <UploadZone
-                label="העלו צילום מסך של האסמכתא"
-                description="גררו את אישור ההעברה של ה-10 ש״ח (צילום מסך מתוך bit/paybox)"
-                onUploadSuccess={(url) => setFeeProofUrl(url)}
-                required={true}
-              />
-            </div>
+              {/* Expiry & CVV */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-text-dark">תוקף <span className="text-error-soft">*</span></label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="MM/YY"
+                    maxLength="5"
+                    value={cardExpiry}
+                    onChange={(e) => {
+                      let val = e.target.value.replace(/[^0-9]/g, '');
+                      if (val.length >= 2) {
+                        setCardExpiry(val.substring(0, 2) + '/' + val.substring(2, 4));
+                      } else {
+                        setCardExpiry(val);
+                      }
+                    }}
+                    disabled={isProcessing}
+                    className="w-full px-4 py-2.5 text-sm rounded-xl border border-primary/10 bg-bg-warm/50 focus:border-accent focus:bg-white outline-none transition-custom text-center font-mono"
+                    style={{ direction: 'ltr' }}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="block text-xs font-semibold text-text-dark">CVV <span className="text-error-soft">*</span></label>
+                  <input
+                    type="password"
+                    required
+                    placeholder="123"
+                    maxLength="3"
+                    value={cardCvv}
+                    onChange={(e) => setCardCvv(e.target.value.replace(/[^0-9]/g, ''))}
+                    disabled={isProcessing}
+                    className="w-full px-4 py-2.5 text-sm rounded-xl border border-primary/10 bg-bg-warm/50 focus:border-accent focus:bg-white outline-none transition-custom text-center font-mono"
+                    style={{ direction: 'ltr' }}
+                  />
+                </div>
+              </div>
 
-            {/* Actions */}
-            <div className="flex gap-3 pt-2">
-              <button
-                type="button"
-                onClick={handleFinalSubmit}
-                disabled={!feeProofUrl}
-                className={`flex-grow py-3 rounded-xl font-semibold text-sm transition-custom shadow-sm cursor-pointer ${
-                  feeProofUrl 
-                    ? 'bg-accent hover:bg-accent-hover text-white hover:scale-[1.01]' 
-                    : 'bg-secondary/20 text-secondary cursor-not-allowed'
-                }`}
-              >
-                שלח פריט לאישור פרסום
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsModalOpen(false)}
-                className="px-5 py-3 bg-white border border-primary/20 text-text-dark rounded-xl text-sm font-semibold hover:bg-bg-warm transition-custom cursor-pointer"
-              >
-                ביטול
-              </button>
-            </div>
+              {/* Security info note */}
+              <div className="bg-primary/5 p-3 rounded-xl flex items-center justify-between text-[10px] text-secondary">
+                <span className="flex items-center gap-1">
+                  <Lock size={12} className="text-success-soft" />
+                  חיבור מוצפן ומאובטח SSL (מצב דמו)
+                </span>
+                <span className="font-bold text-text-dark">₪10.00 לתשלום</span>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="submit"
+                  disabled={isProcessing}
+                  className={`flex-grow py-3 rounded-xl font-semibold text-sm transition-custom shadow-sm cursor-pointer flex items-center justify-center gap-2 text-white ${
+                    isProcessing 
+                      ? 'bg-accent/70 cursor-not-allowed' 
+                      : 'bg-accent hover:bg-accent-hover'
+                  }`}
+                >
+                  {isProcessing ? (
+                    <>
+                      <Loader2 size={16} className="animate-spin" />
+                      <span>מעבד תשלום מאובטח...</span>
+                    </>
+                  ) : (
+                    <span>שלם ₪10 ופרסם</span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsModalOpen(false)}
+                  disabled={isProcessing}
+                  className="px-5 py-3 bg-white border border-primary/20 text-text-dark rounded-xl text-sm font-semibold hover:bg-bg-warm transition-custom cursor-pointer"
+                >
+                  ביטול
+                </button>
+              </div>
+            </form>
+
           </div>
         </div>
       )}

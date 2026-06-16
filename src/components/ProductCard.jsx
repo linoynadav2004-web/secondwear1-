@@ -1,6 +1,7 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import { ShoppingBag, Eye, Trash2, Clock, CheckCircle, HelpCircle } from 'lucide-react';
+import { ShoppingBag, Clock, CheckCircle } from 'lucide-react';
 
 export default function ProductCard({ product, showActions = true, isAdminView = false, onActionClick = null }) {
   const { addToCart, categories, getUserById, currentUser } = useApp();
@@ -46,51 +47,69 @@ export default function ProductCard({ product, showActions = true, isAdminView =
 
   return (
     <div className="bg-white rounded-2xl overflow-hidden shadow-premium hover:shadow-premium-hover transition-custom group flex flex-col h-full border border-primary/5">
-      {/* Product Image Container */}
-      <div className="relative aspect-[4/5] overflow-hidden bg-bg-warm">
-        <img
-          src={product.image_url}
-          alt={product.title}
-          className="w-full h-full object-cover group-hover:scale-105 transition-custom"
-          loading="lazy"
-        />
-        
-        {/* Category & Status Overlay */}
-        <div className="absolute top-3 right-3 flex flex-col gap-1.5 items-end">
-          {category && (
-            <span className="bg-bg-warm/95 text-text-dark text-xs font-medium px-2.5 py-1 rounded-full shadow-sm">
-              {category.name}
-            </span>
-          )}
-          {getStatusBadge()}
-        </div>
+      
+      {/* Link wrapper for image and product details */}
+      <Link to={`/product/${product.id}`} className="flex flex-col flex-grow">
+        {/* Product Image Container */}
+        <div className="relative aspect-[4/5] overflow-hidden bg-bg-warm">
+          <img
+            src={product.image_url}
+            alt={product.title}
+            className="w-full h-full object-cover group-hover:scale-102 transition-custom"
+            loading="lazy"
+          />
+          
+          {/* Category & Status Overlay */}
+          <div className="absolute top-3 right-3 flex flex-col gap-1.5 items-end">
+            {category && (
+              <span className="bg-bg-warm/95 text-text-dark text-xs font-medium px-2.5 py-1 rounded-full shadow-sm">
+                {category.name}
+              </span>
+            )}
+            {getStatusBadge()}
+          </div>
 
-        {/* Quick info hover overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-custom flex items-end p-4">
-          <div className="text-white text-xs">
-            <p className="font-semibold">{seller?.full_name || 'מוכר/ת'}</p>
-            <p className="opacity-90">{seller?.phone || 'טלפון לא זמין'}</p>
+          {/* Quick info hover overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent opacity-0 group-hover:opacity-100 transition-custom flex items-end p-4">
+            <div className="text-white text-xs text-right w-full">
+              <p className="font-semibold">{seller?.full_name || 'מוכר/ת'}</p>
+              <p className="opacity-90">{seller?.phone || 'טלפון לא זמין'}</p>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Product Information */}
-      <div className="p-4 flex flex-col flex-grow">
-        <h3 className="font-playfair text-lg font-bold text-text-dark leading-tight group-hover:text-primary transition-custom mb-1 line-clamp-1">
-          {product.title}
-        </h3>
-        
-        <p className="text-secondary text-xs line-clamp-2 mb-3 flex-grow leading-relaxed">
-          {product.description || 'אין תיאור לפריט זה.'}
-        </p>
+        {/* Product Information */}
+        <div className="p-4 flex flex-col flex-grow text-right">
+          <h3 className="font-playfair text-lg font-bold text-text-dark leading-tight group-hover:text-primary transition-custom mb-1 line-clamp-1">
+            {product.title}
+          </h3>
+          
+          <p className="text-secondary text-xs line-clamp-2 mb-3 leading-relaxed">
+            {product.description || 'אין תיאור לפריט זה.'}
+          </p>
 
-        <div className="flex justify-between items-center mt-auto">
-          <div>
+          {/* Seller Info */}
+          <div className="bg-bg-warm/60 p-2.5 rounded-xl border border-primary/5 text-xs mb-1 space-y-1 w-full mt-auto">
+            <div className="flex justify-between">
+              <span className="text-secondary font-medium">מוכר/ת:</span>
+              <span className="text-text-dark font-semibold">{seller?.full_name || 'לא ידוע'}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-secondary font-medium">טלפון:</span>
+              <span className="text-accent font-bold tracking-wide">{seller?.phone || 'לא זמין'}</span>
+            </div>
+          </div>
+        </div>
+      </Link>
+
+      {/* Action panel & Price (kept outside link for clickable actions) */}
+      <div className="p-4 pt-2 border-t border-primary/5 mt-auto">
+        <div className="flex justify-between items-center">
+          <div className="text-right">
             <span className="text-xs text-secondary block">מחיר פריט</span>
             <span className="text-xl font-bold text-text-dark">₪{product.price}</span>
           </div>
 
-          {/* Catalog vs Listings Action */}
           {showActions && (
             <div>
               {product.status === 'active' ? (

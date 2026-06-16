@@ -1,19 +1,15 @@
 import React, { useState } from 'react';
 import { useApp } from '../context/AppContext';
 import ProductCard from '../components/ProductCard';
-import { Layers, Sparkles, Shirt, Wind, Footprints, ShoppingBag, Info, ShieldCheck } from 'lucide-react';
+import { Layers, Sparkles, Shirt, Wind, Footprints, ShoppingBag, Info } from 'lucide-react';
 
 export default function HomePage() {
-  const { products, categories, approveListingFee, currentUser, isSupabaseConfigured } = useApp();
+  const { products, categories, isSupabaseConfigured } = useApp();
   const [selectedCategory, setSelectedCategory] = useState('all');
-
   // Filter only active products for the catalog
   const activeProducts = products.filter(
     (p) => p.status === 'active' && (selectedCategory === 'all' || p.category_id === selectedCategory)
   );
-
-  // Products waiting for admin publication fee approval (for simulation)
-  const pendingFeeProducts = products.filter((p) => p.status === 'pending_fee_approval');
 
   // Map Category Icons
   const renderCatIcon = (iconName) => {
@@ -30,6 +26,8 @@ export default function HomePage() {
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12">
+      
+
       
       {!isSupabaseConfigured && (
         <div className="bg-amber-500/10 border border-amber-500/20 text-amber-900 p-5 rounded-2xl flex items-center gap-4 text-sm font-semibold text-right shadow-sm">
@@ -77,7 +75,7 @@ export default function HomePage() {
         <div className="text-right flex-grow">
           <h4 className="font-semibold text-text-dark text-sm">איך זה עובד ב-SecondWear?</h4>
           <p className="text-secondary text-xs mt-1 leading-relaxed">
-            העלאת פריט עולה עמלה סמלית של 10 ש״ח (Bit/Paybox להנהלה). רכישת פריט מתבצעת על ידי העברת התשלום ישירות למוכר בצירוף 10% עמלת אתר. שני השלבים מנוהלים ומאובטחים בעזרת העלאת צילום מסך של אסמכתת התשלום!
+            העלאת פריט עולה עמלה סמלית של 10 ש״ח באשראי מאובטח. רכישת פריט מתבצעת על ידי העברת התשלום ישירות למוכר בצירוף 10% עמלת אתר (Bit/PayBox), כאשר האסמכתא שלכם נסרקת ומאומתת מיידית על ידי Gemini AI!
           </p>
         </div>
       </section>
@@ -136,7 +134,7 @@ export default function HomePage() {
             <div className="text-4xl">🧥</div>
             <h3 className="font-playfair text-xl font-bold text-text-dark">אין פריטים פעילים כרגע</h3>
             <p className="text-secondary text-sm leading-relaxed">
-              הקטלוג כרגע ריק או שהמוצרים שהועלו ממתינים לאישור מנהל על עמלת הפרסום (10 ש״ח) בסימולטור למעלה.
+              הקטלוג כרגע ריק. העלו את הפריט הראשון שלכם — עמלת פרסום של 10 ש״ח באשראי מאובטח, והפריט מיד פעיל!
             </p>
             <div className="pt-2">
               <a

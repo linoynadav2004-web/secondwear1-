@@ -1,11 +1,108 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useApp } from '../context/AppContext';
-import { Clock, CheckCircle, Smartphone, User, FileText, ChevronLeft, ShieldCheck } from 'lucide-react';
+import UploadZone from '../components/UploadZone';
+import { Clock, CheckCircle, Smartphone, User, FileText, ChevronLeft, ShieldCheck, Mail, Lock, KeyRound, Check, AlertCircle } from 'lucide-react';
 
 export default function MyListingsPage() {
-  const { products, currentUser, getUserById, approvePayment } = useApp();
-  const [activeTab, setActiveTab] = useState('selling'); // 'selling' or 'bought'
+  const { products, currentUser, getUserById, approvePayment, updateUserProfile, updateUserEmail, updateUserPassword, deleteProduct } = useApp();
+  const [activeTab, setActiveTab] = useState('selling'); // 'selling', 'bought', or 'settings'
   const [selectedReceipt, setSelectedReceipt] = useState(null); // zoom receipt modal state
+
+  // Settings form states
+  const [profileForm, setProfileForm] = useState({
+    fullName: currentUser?.full_name || '',
+    phone: currentUser?.phone || '',
+    avatarUrl: currentUser?.avatar_url || ''
+  });
+  const [useAvatarUrl, setUseAvatarUrl] = useState(false);
+  const [emailForm, setEmailForm] = useState({
+    email: currentUser?.email || ''
+  });
+  const [passwordForm, setPasswordForm] = useState({
+    password: '',
+    confirmPassword: ''
+  });
+
+  const [profileMsg, setProfileMsg] = useState({ type: '', text: '' });
+  const [emailMsg, setEmailMsg] = useState({ type: '', text: '' });
+  const [passwordMsg, setPasswordMsg] = useState({ type: '', text: '' });
+  
+  const [isProfileSaving, setIsProfileSaving] = useState(false);
+  const [isEmailSaving, setIsEmailSaving] = useState(false);
+  const [isPasswordSaving, setIsPasswordSaving] = useState(false);
+
+  // Sync state if currentUser changes (e.g. after refresh/login)
+  useEffect(() => {
+    if (currentUser) {
+      setProfileForm({
+        fullName: currentUser.full_name || '',
+        phone: currentUser.phone || '',
+        avatarUrl: currentUser.avatar_url || ''
+      });
+      setEmailForm({
+        email: currentUser.email || ''
+      });
+    }
+  }, [currentUser]);
+
+  const handleUpdateProfile = async (e) => {
+    e.preventDefault();
+    setProfileMsg({ type: '', text: '' });
+    if (!profileForm.fullName.trim() || !profileForm.phone.trim()) {
+      setProfileMsg({ type: 'error', text: 'נא למלא שם מלא ומספר טלפון.' });
+      return;
+    }
+    setIsProfileSaving(true);
+    try {
+      await updateUserProfile(profileForm);
+      setProfileMsg({ type: 'success', text: 'הפרטים האישיים עודכנו בהצלחה!' });
+    } catch (err) {
+      setProfileMsg({ type: 'error', text: `שגיאה בעדכון הפרטים: ${err.message}` });
+    } finally {
+      setIsProfileSaving(false);
+    }
+  };
+
+  const handleUpdateEmail = async (e) => {
+    e.preventDefault();
+    setEmailMsg({ type: '', text: '' });
+    if (!emailForm.email.trim()) {
+      setEmailMsg({ type: 'error', text: 'נא להזין כתובת דוא"ל תקינה.' });
+      return;
+    }
+    setIsEmailSaving(true);
+    try {
+      await updateUserEmail(emailForm.email.trim());
+      setEmailMsg({ type: 'success', text: 'כתובת הדוא"ל עודכנה בהצלחה!' });
+    } catch (err) {
+      setEmailMsg({ type: 'error', text: `שגיאה בעדכון הדוא"ל: ${err.message}` });
+    } finally {
+      setIsEmailSaving(false);
+    }
+  };
+
+  const handleUpdatePassword = async (e) => {
+    e.preventDefault();
+    setPasswordMsg({ type: '', text: '' });
+    if (passwordForm.password.length < 6) {
+      setPasswordMsg({ type: 'error', text: 'הסיסמה החדשה חייבת להיות באורך של לפחות 6 תווים.' });
+      return;
+    }
+    if (passwordForm.password !== passwordForm.confirmPassword) {
+      setPasswordMsg({ type: 'error', text: 'הסיסמאות שהזנת אינן תואמות.' });
+      return;
+    }
+    setIsPasswordSaving(true);
+    try {
+      await updateUserPassword(passwordForm.password);
+      setPasswordMsg({ type: 'success', text: 'הסיסמה עודכנה בהצלחה!' });
+      setPasswordForm({ password: '', confirmPassword: '' });
+    } catch (err) {
+      setPasswordMsg({ type: 'error', text: `שגיאה בעדכון הסיסמה: ${err.message}` });
+    } finally {
+      setIsPasswordSaving(false);
+    }
+  };
 
   // Filter listings where user is the seller
   const mySellListings = products.filter((p) => p.user_id === currentUser.id);
@@ -34,11 +131,17 @@ export default function MyListingsPage() {
       {/* Header and User profile card */}
       <div className="bg-white rounded-3xl p-6 border border-primary/5 shadow-premium flex flex-col sm:flex-row items-center justify-between gap-6">
         <div className="flex items-center gap-4 text-right">
-          <img 
-            src={currentUser.avatar_url} 
-            alt={currentUser.full_name} 
-            className="w-16 h-16 rounded-full object-cover border-2 border-accent"
-          />
+          {currentUser.avatar_url ? (
+            <img 
+              src={currentUser.avatar_url} 
+              alt={currentUser.full_name} 
+              className="w-16 h-16 rounded-full object-cover border-2 border-accent"
+            />
+          ) : (
+            <div className="w-16 h-16 rounded-full bg-accent/10 text-accent border-2 border-accent flex items-center justify-center font-bold text-xl">
+              {currentUser.full_name?.[0]?.toUpperCase() || 'U'}
+            </div>
+          )}
           <div>
             <h1 className="font-playfair text-2xl font-bold text-text-dark">{currentUser.full_name}</h1>
             <p className="text-secondary text-sm">{currentUser.email} | {currentUser.phone}</p>
@@ -72,10 +175,20 @@ export default function MyListingsPage() {
         >
           רכישות שלי ({myBuyListings.length})
         </button>
+        <button
+          onClick={() => setActiveTab('settings')}
+          className={`px-6 py-3 text-sm font-semibold border-b-2 transition-custom cursor-pointer ${
+            activeTab === 'settings' 
+              ? 'border-accent text-accent' 
+              : 'border-transparent text-secondary hover:text-text-dark'
+          }`}
+        >
+          הגדרות פרופיל
+        </button>
       </div>
 
       {/* Main Area */}
-      {activeTab === 'selling' ? (
+      {activeTab === 'selling' && (
         <div className="space-y-6">
           {mySellListings.length === 0 ? (
             <div className="bg-white rounded-2xl py-12 px-4 text-center border max-w-md mx-auto">
@@ -140,6 +253,25 @@ export default function MyListingsPage() {
                         </div>
                       )}
 
+                      {/* Delete button option */}
+                      {(product.status === 'active' || product.status === 'pending_fee_approval') && (
+                        <button
+                          type="button"
+                          onClick={async () => {
+                            if (window.confirm(`האם את בטוחה שברצונך למחוק את הפריט "${product.title}"?`)) {
+                              try {
+                                await deleteProduct(product.id);
+                              } catch (err) {
+                                alert(`שגיאה במחיקת המוצר: ${err.message}`);
+                              }
+                            }
+                          }}
+                          className="w-full bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 py-2.5 rounded-xl text-xs font-bold transition-custom cursor-pointer flex items-center justify-center gap-1.5"
+                        >
+                          <span>מחיקת פריט</span>
+                        </button>
+                      )}
+
                       {/* Main Flow: Seller Approves Payment (Step C) */}
                       {product.status === 'pending_payment_approval' && buyer && (
                         <div className="bg-blue-50/60 rounded-2xl p-4 border border-blue-200 space-y-4">
@@ -183,8 +315,9 @@ export default function MyListingsPage() {
             </div>
           )}
         </div>
-      ) : (
-        // Bought Listings Tab
+      )}
+
+      {activeTab === 'bought' && (
         <div className="space-y-6">
           {myBuyListings.length === 0 ? (
             <div className="bg-white rounded-2xl py-12 px-4 text-center border max-w-md mx-auto">
@@ -226,6 +359,223 @@ export default function MyListingsPage() {
               })}
             </div>
           )}
+        </div>
+      )}
+
+      {activeTab === 'settings' && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-right">
+          
+          {/* Card 1: Personal Details */}
+          <div className="bg-white rounded-3xl p-6 border border-primary/10 shadow-premium space-y-6">
+            <div>
+              <h3 className="font-playfair text-xl font-bold text-text-dark flex items-center gap-2 justify-end">
+                <span>עדכון פרטים אישיים</span>
+                <User size={20} className="text-accent" />
+              </h3>
+              <p className="text-secondary text-xs mt-1 font-light">שם מלא, מספר טלפון ותמונת פרופיל</p>
+            </div>
+
+            {profileMsg.text && (
+              <div className={`p-4 rounded-xl text-xs font-semibold flex items-center gap-2 ${
+                profileMsg.type === 'success' 
+                  ? 'bg-success-soft/10 text-success-soft border border-success-soft/20' 
+                  : 'bg-error-soft/10 text-error-soft border border-error-soft/20'
+              }`}>
+                {profileMsg.type === 'success' ? <Check size={16} /> : <AlertCircle size={16} />}
+                <span>{profileMsg.text}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleUpdateProfile} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-text-dark">שם מלא</label>
+                <input
+                  type="text"
+                  value={profileForm.fullName}
+                  onChange={(e) => setProfileForm({ ...profileForm, fullName: e.target.value })}
+                  placeholder="הזינו שם מלא"
+                  className="w-full px-4 py-2.5 text-sm rounded-xl border border-primary/10 bg-bg-warm/50 focus:border-accent focus:bg-white outline-none transition-custom text-right"
+                  required
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="block text-xs font-semibold text-text-dark">מספר טלפון להעברות (Bit/PayBox)</label>
+                <input
+                  type="tel"
+                  value={profileForm.phone}
+                  onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })}
+                  placeholder="לדוגמה: 050-1234567"
+                  className="w-full px-4 py-2.5 text-sm rounded-xl border border-primary/10 bg-bg-warm/50 focus:border-accent focus:bg-white outline-none transition-custom text-right"
+                  required
+                />
+              </div>
+
+              {/* Avatar upload or URL */}
+              <div className="space-y-1.5 pt-2">
+                <label className="block text-xs font-semibold text-text-dark">תמונת פרופיל</label>
+                
+                <div className="flex gap-2 mb-2">
+                  <button
+                    type="button"
+                    onClick={() => { setUseAvatarUrl(false); setProfileForm({ ...profileForm, avatarUrl: '' }); }}
+                    className={`px-3 py-1.5 rounded-lg text-[10px] font-semibold transition-custom cursor-pointer ${
+                      !useAvatarUrl 
+                        ? 'bg-accent text-white shadow-sm' 
+                        : 'bg-primary/5 text-text-dark hover:bg-primary/10'
+                    }`}
+                  >
+                    העלאת קובץ תמונה
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setUseAvatarUrl(true); setProfileForm({ ...profileForm, avatarUrl: '' }); }}
+                    className={`px-3 py-1.5 rounded-lg text-[10px] font-semibold transition-custom cursor-pointer ${
+                      useAvatarUrl 
+                        ? 'bg-accent text-white shadow-sm' 
+                        : 'bg-primary/5 text-text-dark hover:bg-primary/10'
+                    }`}
+                  >
+                    הזנת קישור (URL)
+                  </button>
+                </div>
+
+                {useAvatarUrl ? (
+                  <input
+                    type="url"
+                    value={profileForm.avatarUrl}
+                    onChange={(e) => setProfileForm({ ...profileForm, avatarUrl: e.target.value })}
+                    placeholder="הדביקו קישור לתמונת פרופיל (URL)"
+                    className="w-full px-4 py-2.5 text-sm rounded-xl border border-primary/10 bg-bg-warm/50 focus:border-accent focus:bg-white outline-none transition-custom text-right"
+                  />
+                ) : (
+                  <UploadZone
+                    label=""
+                    description="גררו קובץ תמונה או לחצו לבחירה"
+                    onUploadSuccess={(url) => setProfileForm({ ...profileForm, avatarUrl: url })}
+                  />
+                )}
+
+                {profileForm.avatarUrl && (
+                  <div className="flex items-center gap-3 mt-3 justify-end">
+                    <span className="text-[10px] text-secondary">תצוגה מקדימה של התמונה:</span>
+                    <img 
+                      src={profileForm.avatarUrl} 
+                      alt="פרופיל" 
+                      className="w-10 h-10 rounded-full object-cover border border-primary/10"
+                      onError={(e) => { e.target.src = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150&auto=format&fit=crop&q=80'; }}
+                    />
+                  </div>
+                )}
+              </div>
+
+              <button
+                type="submit"
+                disabled={isProfileSaving}
+                className="w-full bg-accent hover:bg-accent-hover text-white py-2.5 rounded-xl text-sm font-semibold transition-custom shadow-md cursor-pointer flex items-center justify-center gap-2"
+              >
+                {isProfileSaving ? 'שומר פרטים...' : 'שמור שינויים'}
+              </button>
+            </form>
+          </div>
+
+          {/* Card 2: Account Credentials (Email / Password) */}
+          <div className="space-y-6">
+            
+            {/* Email form */}
+            <div className="bg-white rounded-3xl p-6 border border-primary/10 shadow-premium space-y-4">
+              <div>
+                <h3 className="font-playfair text-lg font-bold text-text-dark flex items-center gap-2 justify-end">
+                  <span>עדכון כתובת דוא"ל</span>
+                  <Mail size={18} className="text-accent" />
+                </h3>
+                <p className="text-secondary text-[11px] mt-0.5 font-light">שינוי כתובת הדוא"ל לשחזור וכניסה</p>
+              </div>
+
+              {emailMsg.text && (
+                <div className={`p-3 rounded-xl text-xs font-semibold flex items-center gap-2 ${
+                  emailMsg.type === 'success' 
+                    ? 'bg-success-soft/10 text-success-soft border border-success-soft/20' 
+                    : 'bg-error-soft/10 text-error-soft border border-error-soft/20'
+                }`}>
+                  {emailMsg.type === 'success' ? <Check size={14} /> : <AlertCircle size={14} />}
+                  <span>{emailMsg.text}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleUpdateEmail} className="space-y-3">
+                <input
+                  type="email"
+                  value={emailForm.email}
+                  onChange={(e) => setEmailForm({ email: e.target.value })}
+                  placeholder="הזינו אימייל חדש"
+                  className="w-full px-4 py-2.5 text-sm rounded-xl border border-primary/10 bg-bg-warm/50 focus:border-accent focus:bg-white outline-none transition-custom text-right"
+                  required
+                />
+                <button
+                  type="submit"
+                  disabled={isEmailSaving}
+                  className="w-full bg-primary hover:bg-primary-hover text-white py-2 rounded-xl text-xs font-semibold transition-custom cursor-pointer"
+                >
+                  {isEmailSaving ? 'מעדכן אימייל...' : 'עדכן כתובת דוא"ל'}
+                </button>
+              </form>
+            </div>
+
+            {/* Password form */}
+            <div className="bg-white rounded-3xl p-6 border border-primary/10 shadow-premium space-y-4">
+              <div>
+                <h3 className="font-playfair text-lg font-bold text-text-dark flex items-center gap-2 justify-end">
+                  <span>שינוי סיסמה</span>
+                  <Lock size={18} className="text-accent" />
+                </h3>
+                <p className="text-secondary text-[11px] mt-0.5 font-light">עדכון סיסמת החשבון (מינימום 6 תווים)</p>
+              </div>
+
+              {passwordMsg.text && (
+                <div className={`p-3 rounded-xl text-xs font-semibold flex items-center gap-2 ${
+                  passwordMsg.type === 'success' 
+                    ? 'bg-success-soft/10 text-success-soft border border-success-soft/20' 
+                    : 'bg-error-soft/10 text-error-soft border border-error-soft/20'
+                }`}>
+                  {passwordMsg.type === 'success' ? <Check size={14} /> : <AlertCircle size={14} />}
+                  <span>{passwordMsg.text}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleUpdatePassword} className="space-y-3">
+                <div>
+                  <input
+                    type="password"
+                    value={passwordForm.password}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, password: e.target.value })}
+                    placeholder="סיסמה חדשה"
+                    className="w-full px-4 py-2.5 text-sm rounded-xl border border-primary/10 bg-bg-warm/50 focus:border-accent focus:bg-white outline-none transition-custom text-right"
+                    required
+                  />
+                </div>
+                <div>
+                  <input
+                    type="password"
+                    value={passwordForm.confirmPassword}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                    placeholder="אימות סיסמה חדשה"
+                    className="w-full px-4 py-2.5 text-sm rounded-xl border border-primary/10 bg-bg-warm/50 focus:border-accent focus:bg-white outline-none transition-custom text-right"
+                    required
+                  />
+                </div>
+                <button
+                  type="submit"
+                  disabled={isPasswordSaving}
+                  className="w-full bg-primary hover:bg-primary-hover text-white py-2 rounded-xl text-xs font-semibold transition-custom cursor-pointer"
+                >
+                  {isPasswordSaving ? 'מעדכן סיסמה...' : 'עדכן סיסמה'}
+                </button>
+              </form>
+            </div>
+
+          </div>
+
         </div>
       )}
 

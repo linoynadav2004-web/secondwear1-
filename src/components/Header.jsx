@@ -90,11 +90,17 @@ export default function Header() {
           {/* Login / Profile Dropdown */}
           {currentUser ? (
             <div className="flex items-center gap-3 border-r border-primary/10 pr-4">
-              <img 
-                src={currentUser.avatar_url} 
-                alt={currentUser.full_name} 
-                className="w-8 h-8 rounded-full object-cover border border-primary/10 hidden sm:block"
-              />
+              {currentUser.avatar_url ? (
+                <img 
+                  src={currentUser.avatar_url} 
+                  alt={currentUser.full_name} 
+                  className="w-8 h-8 rounded-full object-cover border border-primary/10 hidden sm:block"
+                />
+              ) : (
+                <div className="w-8 h-8 rounded-full bg-accent/10 text-accent flex items-center justify-center font-bold text-xs border border-accent/20 hidden sm:flex">
+                  {currentUser.full_name?.[0]?.toUpperCase() || 'U'}
+                </div>
+              )}
               <div className="hidden lg:block text-right">
                 <p className="text-xs font-bold text-text-dark">{currentUser.full_name}</p>
                 <p className="text-[10px] text-secondary">{currentUser.phone}</p>

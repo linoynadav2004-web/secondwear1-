@@ -1,16 +1,137 @@
-# React + Vite
+# SecondWear - פלטפורמת אופנה יד שנייה חכמה (Peer-to-Peer)
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+SecondWear היא פלטפורמת מסחר קהילתית (עמית-לעמית) לקנייה ומכירה של בגדי יד שנייה בישראל, המשלבת טכנולוגיות בינה מלאכותית (AI) מתקדמות ואינטגרציות ממשלתיות כדי לייעל, לאבטח ולהפוך את חוויית הרכישה והמכירה למאובטחת, מהירה ואינטראקטיבית.
 
-Currently, two official plugins are available:
+---
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## 📖 סקירה כללית
 
-## React Compiler
+הפרויקט מאפשר למשתמשים לפתוח חנות אישית, להעלות פריטי לבוש למכירה, לדפדף בקטלוג מסונן, ולהזמין פריטים דרך סל קניות. האתר מבוסס על שירותי ענן של Supabase ומשלב אינטגרציות חכמות:
+1. **סורק קבלות חכם (Gemini Vision OCR)**: מאמת באופן אוטומטי ובזמן אמת את צילומי מסך העברות הכספים (Bit / Paybox) כדי למנוע הונאות וקבלות מזויפות.
+2. **צ'אט משא ומתן מבוסס AI**: מאפשר לקונה לשוחח עם סימולציה של המוכר בעברית טבעית (Gemini 2.5 Flash), לשאול על מצב הבגד, לקבל המלצות סטיילינג, להתמקח על המחיר ולקבל הנחות מאושרות דינמית.
+3. **השלמה אוטומטית של יישובים**: חיבור בזמן אמת ל-API הממשלתי הפתוח לאיתור ואיסוף נוח של הפריט.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+---
 
-## Expanding the ESLint configuration
+## 🎯 הגדרת הבעיה והערך
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+### איזו בעיה הפרויקט פותר (הכאב הקונקרטי)
+* **חוסר אמון בעסקאות יד שנייה ישירות**: קונים ומוכרים נאלצים להמתין לאישורי העברות (כמו ביט או פייבוקס), וישנו חשש מתמיד מקבלות מזויפות, צילומי מסך ערוכים או אי-הבנות פיננסיות.
+* **סירבול ותשישות במשא ומתן**: תהליך בירור המידות, המצב של הבגד והתמקחות על המחיר מול מוכרים לוקח שעות או ימים של הודעות באפליקציות צ'אט, מה שמוביל לנטישת עסקאות.
+* **בזבוז וזיהום סביבתי**: תעשיית האופנה המהירה (Fast Fashion) מייצרת כמויות אדירות של זיהום ובגדים שנזרקים לאחר שימוש קצר. SecondWear מעודדת אופנה מעגלית (Slow Fashion) ונגישה.
+
+---
+
+## 👥 קהל היעד
+
+* **קונים בעלי מודעות סביבתית ואקולוגית**: המחפשים לצרוך בגדים באיכות גבוהה ללא יצירת פסולת חדשה.
+* **צעירים, סטודנטים וחובבי אופנה**: המחפשים מותגי פרימיום ומותגי רחוב במחירים נוחים ונגישים.
+* **מוכרים המעוניינים לפנות מקום בארון**: שרוצים לייצר הכנסה צדדית מבגדים שאינם בשימוש, ללא המאמץ של מענה מתמיד להודעות והתמקחויות.
+* **תרחיש שימוש טיפוסי**: משתמש/ת שרוצה למכור ג'ינס או שמלה שלא לבשה מעולם, מעלה את הפריט ב-2 דקות, משלם/ת עמלת פרסום באשראי סימולטיבי, ומאפשר/ת ל-AI לנהל את השיח מול הקונים 24/7 עד לסגירת העסקה.
+
+---
+
+## ⚖️ מתחרים ובידול בשוק
+
+| מאפיין | יד2 (Yad2) / פייסבוק Marketplace | קבוצות וואטסאפ / טלגרם | SecondWear |
+| :--- | :--- | :--- | :--- |
+| **חווית קנייה** | לוחות מודעות מיושנים ולא ממוקדים באופנה | שיח לא מסודר, ללא קטלוג מסונן או חיפוש נוח | אתר אי-קומרס מודרני, פרימיום וממוקד אופנה |
+| **אימות תשלום** | ידני לחלוטין (חשוף להונאות קבלות) | ידני ללא פיקוח | **סורק AI (Gemini)** הבודק את צילום הקבלה אוטומטית |
+| **משא ומתן ובירורים** | הודעות ארוכות ומייגעות, תלוי בזמינות המוכר | תלוי בזמינות ובמענה ידני | **צ'אט סימולציה מבוסס AI** שעונה בשם המוכר 24/7 ומנהל מו"מ |
+| **איתור ומיקום** | הזנה ידנית חופשית (טעויות כתיב) | ללא שדות מובנים | **חיבור ל-API הממשלתי (Gov Data)** להשלמת עיר מדויקת |
+
+---
+
+## 📊 תרשים ERD - מודל הנתונים (Supabase)
+
+מודל הנתונים של האפליקציה בנוי ומנוהל ב-Supabase (PostgreSQL). להלן תרשים ישויות-קשרים (ERD) המפרט את הטבלאות, המפתחות, סוגי הנתונים והקשרים ביניהן:
+
+```mermaid
+erDiagram
+    users {
+        uuid id PK "DEFAULT gen_random_uuid()"
+        string email UNIQUE "NOT NULL"
+        string full_name "NOT NULL"
+        string phone "NOT NULL (עבור תשלום ישיר)"
+        string avatar_url "NULL"
+        boolean is_admin "DEFAULT FALSE"
+        timestamp created_at "DEFAULT timezone('utc')"
+    }
+
+    categories {
+        uuid id PK "DEFAULT gen_random_uuid()"
+        string name UNIQUE "NOT NULL"
+        string icon_url "NULL (שם אייקון מ-Lucide)"
+        timestamp created_at "DEFAULT timezone('utc')"
+    }
+
+    products {
+        uuid id PK "DEFAULT gen_random_uuid()"
+        string title "NOT NULL"
+        text description "NULL"
+        decimal price "NOT NULL CHECK (price >= 0)"
+        string image_url "NOT NULL (קישור לתמונה בענן)"
+        uuid category_id FK "REFERENCES categories(id) ON DELETE SET NULL"
+        uuid user_id FK "REFERENCES users(id) ON DELETE CASCADE"
+        uuid buyer_id FK "REFERENCES users(id) ON DELETE SET NULL"
+        string status "DEFAULT 'pending_fee_approval' (active, pending_payment_approval, sold)"
+        string fee_proof_url "NULL"
+        string payment_proof_url "NULL"
+        string payment_method "NULL ('bit' | 'paybox')"
+        timestamp created_at "DEFAULT timezone('utc')"
+    }
+
+    users ||--o{ products : "מפרסם/ת פריטים (user_id)"
+    users ||--o{ products : "רוכש/ת פריטים (buyer_id)"
+    categories ||--o{ products : "מכיל פריטים (category_id)"
+```
+
+---
+
+## 🔌 רשימת שירותים חיצוניים ואינטגרציות
+
+להלן פירוט השירותים החיצוניים שהמוצר נשען עליהם כדי לספק את חוויית המשתמש:
+
+| שם השירות | סוג | תפקיד במוצר |
+| :--- | :--- | :--- |
+| **Supabase Database** | בסיס נתונים (Postgres) | שמירה ואחזור של כל המידע המרכזי באתר (פריטים, קטגוריות, משתמשים) בזמן אמת. |
+| **Supabase Authentication** | אבטחה ואוטנטיקציה | ניהול הרשמה והתחברות משתמשים מאובטחת, איפוס סיסמאות, והחלת חוקי אבטחה ברמת שורה (RLS Policies). |
+| **Google Gemini 2.5 Flash API** | בינה מלאכותית (AI) | 1. **ניתוח קבלות (OCR וויז'ואל)**: סריקה וניתוח אוטומטי של קובצי התמונה של העברות ביט/פייבוקס ומניעת הונאות.<br>2. **סוכן צ'אט המוכר**: סוכן דיאלוגי המדמה את המוכר בעברית טבעית לצורך בירורים ומשא ומתן. |
+| **Gov Data API (מדינת ישראל)** | מאגרי מידע ממשלתיים | קריאת API פתוחה לשליפת רשימת הערים והיישובים הרשמית של ישראל לצורך השלמה אוטומטית (Autocomplete) בעת העלאת פריט ובעת מילוי פרטי משלוח. |
+| **WhatsApp Business Web API** | אינטגרציה חיצונית | יצירת קישור שיחה מהיר (`wa.me`) עם הודעה מובנית מראש המכילה את פרטי הפריט, למעבר מהיר מהצ'אט הווירטואלי לשיחה ישירה מול המוכר. |
+
+---
+
+## 🛠️ הוראות הרצה מקומיות וקישורים
+
+### 🔗 קישור לפרויקט החי (Live Deployment)
+הפרויקט פרוס ועובד בכתובת: **[secondwear1.vercel.app](https://secondwear1.vercel.app)**
+
+---
+
+### 💻 הרצה מקומית במחשב
+
+#### 1. דרישות קדם
+* מותקן Node.js (גרסה 18 ומעלה)
+
+#### 2. התקנה
+שכפלו את הריפו והתקינו את התלויות:
+```bash
+git clone <repository-url>
+cd secondwear1
+npm install
+```
+
+#### 3. משתני סביבה
+צרו קובץ `.env` בתיקייה הראשית והוסיפו את המשתנים הבאים עם המפתחות שלכם:
+```env
+VITE_SUPABASE_URL=YOUR_SUPABASE_URL
+VITE_SUPABASE_ANON_KEY=YOUR_SUPABASE_ANON_KEY
+VITE_GEMINI_API_KEY=YOUR_GEMINI_API_KEY
+```
+
+#### 4. הרצה במצב פיתוח
+```bash
+npm run dev
+```
+האתר יהיה זמין במחשב בכתובת: `http://localhost:5173`.
