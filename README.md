@@ -48,9 +48,15 @@ SecondWear היא פלטפורמת מסחר קהילתית (עמית-לעמית)
 
 ---
 
-## 📊 תרשים ERD - מודל הנתונים (Supabase)
+## 📊 ארכיטקטורת נתונים ותרשים ERD (Supabase / Postgres)
 
-מודל הנתונים של האפליקציה בנוי ומנוהל ב-Supabase (PostgreSQL). להלן תרשים ישויות-קשרים (ERD) המפרט את הטבלאות, המפתחות, סוגי הנתונים והקשרים ביניהן:
+מודל הנתונים של **SecondWear** מנוהל במערכת Postgres המאובטחת בענן של Supabase. המודל תוכנן בקפידה כדי לתמוך בארכיטקטורת Peer-to-Peer, אבטחת נתונים מחמירה (RLS), וניהול מחזור חיים מורכב של מוצר.
+
+---
+
+### 1. תרשים ישויות-קשרים (ERD Diagram)
+
+התרשים הבא מציג את מבנה הישויות בבסיס הנתונים ואת הקשרים הלוגיים ביניהן:
 
 ```mermaid
 erDiagram
@@ -75,22 +81,113 @@ erDiagram
         uuid id PK "DEFAULT gen_random_uuid()"
         string title "NOT NULL"
         text description "NULL"
-        decimal price "NOT NULL CHECK (price >= 0)"
-        string image_url "NOT NULL (קישור לתמונה בענן)"
+        decimal price "NOT NULL (price >= 0)"
+        string image_url "NOT NULL"
         uuid category_id FK "REFERENCES categories(id) ON DELETE SET NULL"
         uuid user_id FK "REFERENCES users(id) ON DELETE CASCADE"
         uuid buyer_id FK "REFERENCES users(id) ON DELETE SET NULL"
-        string status "DEFAULT 'pending_fee_approval' (active, pending_payment_approval, sold)"
+        string status "DEFAULT 'pending_fee_approval'"
         string fee_proof_url "NULL"
         string payment_proof_url "NULL"
         string payment_method "NULL ('bit' | 'paybox')"
         timestamp created_at "DEFAULT timezone('utc')"
     }
 
-    users ||--o{ products : "מפרסם/ת פריטים (user_id)"
-    users ||--o{ products : "רוכש/ת פריטים (buyer_id)"
-    categories ||--o{ products : "מכיל פריטים (category_id)"
+    users ||--o{ products : "מפרסם/ת (user_id)"
+    users ||--o{ products : "רוכש/ת (buyer_id)"
+    categories ||--o{ products : "מסווג (category_id)"
 ```
+
+---
+
+### 2. תיאור מפורט של הטבלאות ומודל הנתונים
+
+#### 👤 טבלת משתמשים (`users`)
+טבלה המכילה פרופילים ציבוריים של המשתמשים. היא מסונכרנת אוטומטית מטבלת המשתמשים המאובטחת של Supabase Auth.
+* **מנגנון סנכרון (Database Trigger):** מוגדר טריגר `on_auth_user_created` המפעיל פונקציית PL/pgSQL בשם `handle_new_user()` מיד לאחר הרשמה מוצלחת של משתמש חדש ב-Supabase Auth, ומעתיק את פרטי המשתמש לטבלה הציבורית.
+* **עמודות מפתח:**
+  - `id` (UUID, PK) - תואם ל-`id` במערכת האימות.
+  - `phone` (Text, Required) - משמש ליצירת קשר מהיר וליצירת קישורי תשלום Peer-to-Peer.
+  - `is_admin` (Boolean) - מגדיר הרשאות ניהול (למשל לאישור קבלות וניהול האתר).
+
+#### 🏷️ טבלת קטגוריות (`categories`)
+סיווגי הלבוש והאופנה הזמינים בפלטפורמה (למשל: שמלות, חולצות, מכנסיים, נעליים).
+* **עמודות מפתח:**
+  - `name` (Text, Unique) - שם הקטגוריה.
+  - `icon_url` (Text) - שם האייקון מתוך ספריית `lucide-react` לרינדור דינמי ויוקרתי בקליינט.
+
+#### 👕 טבלת מוצרים ופריטים (`products`)
+לב המערכת, המכילה את כל פריטי הלבוש למכירה, מנהלת את תהליך הרכישה P2P ואת מצבם הנוכחי.
+* **שלמות נתונים והתנהגות מחיקה (Cascading Rules):**
+  - `user_id` (FK ל-`users` עם `ON DELETE CASCADE`): אם משתמש מוחק את חשבונו, כל הפריטים שהעלה נמחקים אוטומטית.
+  - `buyer_id` (FK ל-`users` עם `ON DELETE SET NULL`): אם קונה מוחק את חשבונו, המוצרים שקנה נשארים במערכת לצרכי תיעוד, אך השדה משתנה ל-`NULL`.
+  - `category_id` (FK ל-`categories` עם `ON DELETE SET NULL`): אם קטגוריה נמחקת, הפריטים משויכים לקטגוריית ברירת מחדל או נותרים ללא שיוך כדי לא לפגוע במוצר עצמו.
+
+---
+
+### 3. דיאגרמת מצבים: מחזור חיים של מוצר (Product State Machine)
+
+ניהול המצבים של המוצר הוא קריטי לאבטחת העסקאות ומניעת הונאות. להלן תיאור המצבים ומעברי המצבים (Transitions) המתרחשים בפלטפורמה:
+
+```mermaid
+stateDiagram-v2
+    [*] --> pending_fee_approval : העלאת פריט חדש
+    note right of pending_fee_approval
+        המוצר נוצר.
+        המוכר מגיש צילום מסך
+        של תשלום עמלת פרסום (10 ש"ח)
+    end note
+
+    pending_fee_approval --> active : מנהל מערכת (Admin) מאשר את עמלת הפרסום
+    note right of active
+        המוצר זמין בקטלוג הציבורי.
+        קונים יכולים לחפש,
+        לנהל מו"מ מול ה-AI, ולרכוש
+    end note
+
+    active --> pending_payment_approval : קונה מבצע Checkout ומעלה קבלה (Bit/Paybox)
+    note right of pending_payment_approval
+        המוצר מוסר זמנית מהקטלוג.
+        סורק ה-AI (Gemini) מאמת את הקבלה
+        וממתין לאישור סופי מהמוכר
+    end note
+
+    pending_payment_approval --> sold : המוכר מאשר קבלת כסף
+    note right of sold
+        העסקה הושלמה.
+        המוצר מסומן כנמכר לצמיתות
+    end note
+
+    pending_payment_approval --> active : המוכר דוחה את הקבלה (חשש לזיוף)
+    note left of active
+        המוצר חוזר לקטלוג
+        הציבורי לקונים אחרים
+    end note
+```
+
+---
+
+### 4. מדיניות אבטחת נתונים ברמת שורה (Row Level Security - RLS)
+
+כדי למנוע מניפולציות וגישה לא מורשית, הפעלנו **Row Level Security** על כל הטבלאות ב-Postgres, עם המדיניות (Policies) הבאות:
+
+* **פרופילי משתמשים (`users`):**
+  - **SELECT:** פתוח לכולם (פרופילים ציבוריים של מוכרים צריכים להיות מוצגים לקונים).
+  - **INSERT / UPDATE:** מורשה אך ורק למשתמש המחובר עצמו באמצעות השוואת `auth.uid() = id`.
+* **קטגוריות (`categories`):**
+  - **SELECT:** פתוח לכל משתמשי האתר (אורחים ורשומים).
+  - **INSERT / UPDATE / DELETE:** מוגבל למנהלי מערכת (`is_admin = true`) בלבד.
+* **מוצרים (`products`):**
+  - **SELECT:**
+    - משתמשים אורחים ורשומים יכולים לראות רק מוצרים במצב `active`.
+    - המוכר (המוסיף) או הקונה (הרוכש) יכולים לראות את הפריט בכל שלב במחזור החיים.
+    - מנהלי מערכת (Admins) יכולים לצפות בכל המוצרים במערכת לצורך ניהול ואישור קבלות.
+  - **INSERT:** מורשה לכל משתמש מחובר (`auth.role() = 'authenticated'`).
+  - **UPDATE:**
+    - מוכר יכול לעדכן את הפריט שלו בלבד (`auth.uid() = user_id`).
+    - קונה מורשה לעדכן את הפריט בזמן תהליך הרכישה (על מנת להזין את ה-`buyer_id` ואת ה-`payment_proof_url` שלו).
+    - מנהל מערכת יכול לעדכן כל פריט (כדי לשנות סטטוס ל-`active` או לנהל תוכן).
+  - **DELETE:** מורשה רק למוכר שהעלה את הפריט או למנהל מערכת.
 
 ---
 
