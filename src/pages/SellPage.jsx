@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
 import UploadZone from '../components/UploadZone';
 import CityInput from '../components/CityInput';
-import { AlertCircle, ArrowLeft, CreditCard, CheckCircle, ShieldAlert, Lock, Loader2 } from 'lucide-react';
+import { AlertCircle, ArrowLeft, CreditCard, CheckCircle, ShieldAlert, Lock, Loader2, Sparkles } from 'lucide-react';
 
 export default function SellPage() {
   const { categories, addProduct } = useApp();
@@ -26,6 +26,99 @@ export default function SellPage() {
   const [cardCvv, setCardCvv] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+
+  // AI Description Generator State
+  const [isGeneratingDesc, setIsGeneratingDesc] = useState(false);
+
+  // Generate description using Gemini AI
+  const handleGenerateAiDescription = async () => {
+    if (!title) {
+      alert('נא להזין כותרת לפריט לפני שימוש במחולל ה-AI.');
+      return;
+    }
+    
+    setIsGeneratingDesc(true);
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    const categoryName = categories.find(c => c.id === categoryId)?.name || 'לבוש כללי';
+    
+    // Prepare prompt
+    const promptText = `You are a creative marketing copywriter for "SecondWear", a Hebrew peer-to-peer second-hand clothing marketplace.
+Write a short, engaging, and appealing description in Hebrew for a clothing item with these details:
+- Title: "${title}"
+- Category: "${categoryName}"
+
+Your description must be highly inviting, positive, and formatted naturally for someone browsing a fashion board.
+Focus on details like the design style, how it looks, and its appeal. 
+Keep the text short (2-3 sentences max).
+Do not include headings, introductions, markdown tags (like \`\`\` or similar), or notes. Respond ONLY with the description text itself in Hebrew.`;
+
+    try {
+      let replyText = "";
+      
+      // If we have an image uploaded as a Base64 string, let's pass it to Gemini Vision!
+      let base64Data = "";
+      let mimeType = "image/jpeg";
+      if (imageUrl && imageUrl.startsWith('data:image/')) {
+        const parts = imageUrl.split(';base64,');
+        if (parts.length === 2) {
+          mimeType = parts[0].replace('data:', '');
+          base64Data = parts[1];
+        }
+      }
+
+      if (apiKey) {
+        let bodyData = {
+          contents: [{
+            parts: [{ text: promptText }]
+          }]
+        };
+
+        // If base64 photo is available, use Gemini Vision analysis!
+        if (base64Data) {
+          bodyData.contents[0].parts.push({
+            inlineData: {
+              mimeType: mimeType,
+              data: base64Data
+            }
+          });
+        }
+
+        const response = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+          {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(bodyData)
+          }
+        );
+
+        if (response.ok) {
+          const resData = await response.json();
+          replyText = resData.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        } else {
+          console.warn("Gemini description call failed, response status:", response.status);
+        }
+      }
+
+      // Fallback simulation if no API key or failed call
+      if (!replyText) {
+        await new Promise(resolve => setTimeout(resolve, 1500));
+        const fallbacks = [
+          `פריט מדהים במצב מצוין! נלבש מעט מאוד ונשמר בארון בקפידה. מושלם ליומיום או לשילוב עם לוק חגיגי יותר. בד נעים מאוד ומחמיא לגוף.`,
+          `מציאה שווה מהארון שלי! בגד איכותי, נוח ומאוד אופנתי. נמכר עקב חוסר שימוש ובמצב מעולה כמעט כמו חדש. כל הקודמת זוכה!`,
+          `פריט הורס במצב מעולה, יושב מושלם ומאוד מחמיא. מתאים לעונה הנוכחית ויוסיף המון סטייל לכל אאוטפיט. גמישות קלה במחיר למציעים רציניים.`
+        ];
+        replyText = fallbacks[Math.floor(Math.random() * fallbacks.length)];
+      }
+
+      setDescription(replyText.trim());
+    } catch (err) {
+      console.error(err);
+      alert(`שגיאה ביצירת תיאור: ${err.message}`);
+    } finally {
+      setIsGeneratingDesc(false);
+    }
+  };
 
   // Validate basic form before opening fee modal
   const handleOpenFeeModal = (e) => {
@@ -168,14 +261,36 @@ export default function SellPage() {
 
           {/* Description */}
           <div>
-            <label htmlFor="description" className="block text-sm font-semibold text-text-dark mb-1.5">
-              תיאור הפריט
-            </label>
+            <div className="flex justify-between items-center mb-1.5">
+              <label htmlFor="description" className="block text-sm font-semibold text-text-dark">
+                תיאור הפריט
+              </label>
+              <button
+                type="button"
+                onClick={handleGenerateAiDescription}
+                disabled={isGeneratingDesc}
+                className={`text-[10px] sm:text-xs font-bold text-accent hover:text-accent-hover transition-custom flex items-center gap-1 cursor-pointer bg-accent/5 px-2.5 py-1 rounded-lg border border-accent/10 hover:bg-accent/10 ${
+                  isGeneratingDesc ? 'opacity-70 cursor-not-allowed' : ''
+                }`}
+              >
+                {isGeneratingDesc ? (
+                  <>
+                    <Loader2 size={12} className="animate-spin text-accent" />
+                    <span>Gemini מנסח תיאור מוצר...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles size={12} className="animate-pulse text-accent" />
+                    <span>לניסוח תיאור ב-AI ✨</span>
+                  </>
+                )}
+              </button>
+            </div>
             <textarea
               id="description"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              placeholder="ספר/י על המידה, המותג, מצב הבגד, סיבת המכירה וכו׳"
+              placeholder="ספר/י על המידה, המותג, מצב הבגד, סיבת המכירה וכו׳ (או היעזר/י במחולל ה-AI שלמעלה כדי לנסח בשבילך!)"
               rows={4}
               className="w-full px-4 py-3 rounded-xl border border-secondary/30 focus:border-accent focus:ring-1 focus:ring-accent outline-none text-sm transition-custom resize-none"
             />

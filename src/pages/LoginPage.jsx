@@ -9,7 +9,7 @@ export default function LoginPage() {
   const location = useLocation();
 
   // Redirect path
-  const from = location.state?.from?.pathname || '/';
+  const from = location.state?.from?.pathname || '/catalog';
 
   // Toggle modes
   const [isLoginMode, setIsLoginMode] = useState(true);

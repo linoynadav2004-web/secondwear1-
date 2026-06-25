@@ -10,6 +10,7 @@ import MyListingsPage from './pages/MyListingsPage';
 import LoginPage from './pages/LoginPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import ProductDetailsPage from './pages/ProductDetailsPage';
+import LandingPage from './pages/LandingPage';
 
 // Reusable protected route guard
 function ProtectedRoute({ children }) {
@@ -41,7 +42,8 @@ function AppContent() {
       {/* Main Screens Container */}
       <main className="flex-grow pb-16">
         <Routes>
-          <Route path="/" element={<HomePage />} />
+          <Route path="/" element={<LandingPage />} />
+          <Route path="/catalog" element={<HomePage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/reset-password" element={<ResetPasswordPage />} />
           <Route path="/product/:id" element={<ProductDetailsPage />} />

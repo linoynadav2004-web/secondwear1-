@@ -121,7 +121,6 @@ export default function UploadZone({ label, description, onUploadSuccess, requir
           accept="image/*"
           className="hidden"
           onChange={handleFileChange}
-          required={required && !previewUrl}
         />
 
         {previewUrl ? (

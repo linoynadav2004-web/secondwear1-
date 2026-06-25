@@ -30,9 +30,9 @@ export default function Header() {
         {/* Menu Links */}
         <nav className="flex items-center gap-1 sm:gap-6 text-sm font-medium">
           <Link
-            to="/"
+            to="/catalog"
             className={`px-3 py-2 rounded-lg transition-custom ${
-              isActive('/') 
+              isActive('/catalog') 
                 ? 'text-primary bg-primary/5 font-bold' 
                 : 'text-text-dark/80 hover:text-primary hover:bg-primary/5'
             }`}
